@@ -1,0 +1,21 @@
+add_subdirectory(driver)
+
+if(NOT BUILD_ARM)
+  message(STATUS "Building bfpp_acc_v2 for X86")
+
+  add_library(bfpp_acc_v2 acc.sc.cc)
+  target_link_libraries(bfpp_acc_v2 PUBLIC ${SECDA_TOOLS_SIM_LIBRARIES} ${SYSC_LIBRARIES})
+  target_include_directories(bfpp_acc_v2 PUBLIC ${SECDA_TOOLS_INCLUDES} ${SYSC_INCLUDES})
+  target_compile_options(bfpp_acc_v2 PUBLIC -fPIC -DSYSC)
+else()
+  message(STATUS "Building bfpp_acc_v2 for ARM")
+
+  add_library(bfpp_acc_v2 OBJECT acc_config.sc.h)
+  target_link_libraries(bfpp_acc_v2 PUBLIC ${SECDA_TOOLS_LIBRARIES} ${CMALIB})
+  target_include_directories(bfpp_acc_v2 PUBLIC ${SECDA_TOOLS_INCLUDES})
+  set_target_properties(bfpp_acc_v2 PROPERTIES LINKER_LANGUAGE CXX)
+  target_compile_options(bfpp_acc_v2 PUBLIC -fPIC)
+  if(BUILD_KRIA)
+    target_compile_options(bfpp_acc_v2 PUBLIC -DKRIA)
+  endif()
+endif()

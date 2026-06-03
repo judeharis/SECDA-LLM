@@ -1,0 +1,66 @@
+{
+    "q2v1.0A": {
+        "bitstreams": "BFP_Q2_v1",
+        "binaries": "llama_cli_v1A_secda_q2",
+        "acc_tag": "BFPP_KRIA_v1.0A_q2",
+        "bins": "bin_q2",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK2=ON -DSECDA_BFPP_ACC_V3=ON"
+    },
+    "q3v1.0A": {
+        "bitstreams": "BFP_Q3_v1",
+        "binaries": "llama_cli_v1A_secda_q3",
+        "acc_tag": "BFPP_KRIA_v1.0A_q3",
+        "bins": "bin_q3",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK3=ON -DSECDA_BFPP_ACC_V3=ON"
+    },
+    "q6v1.0A": {
+        "bitstreams": "BFP_Q6_v1",
+        "binaries": "llama_cli_v1A_secda_q6",
+        "acc_tag": "BFPP_KRIA_v1.0A_q6",
+        "bins": "bin_q6",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK6=ON -DSECDA_BFPP_ACC_V3=ON"
+    },
+    "q2q3v1.0A": {
+        "bitstreams": "BFP_Q2Q3_v1",
+        "binaries": "llama_cli_v1A_secda_q2q3",
+        "acc_tag": "BFPP_KRIA_v1.0A_q2q3",
+        "bins": "bin_q2q3",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK2=ON -DSECDA_QK3=ON -DSECDA_BFPP_ACC_V3=ON"
+    },
+    "q2q6v1.0A": {
+        "bitstreams": "BFP_Q2Q6_v1",
+        "binaries": "llama_cli_v1A_secda_q2q6",
+        "acc_tag": "BFPP_KRIA_v1.0A_q2q6",
+        "bins": "bin_q2q6",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK2=ON -DSECDA_QK6=ON -DSECDA_BFPP_ACC_V3=ON"
+    },
+    "q3q6v1.0A": {
+        "bitstreams": "BFP_Q3Q6_v1",
+        "binaries": "llama_cli_v1A_secda_q3q6",
+        "acc_tag": "BFPP_KRIA_v1.0A_q3q6",
+        "bins": "bin_q3q6",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK3=ON -DSECDA_QK6=ON -DSECDA_BFPP_ACC_V3=ON"
+    },
+    "q2q3q6v1.0A": {
+        "bitstreams": "BFP_Q2Q3Q6_v1",
+        "binaries": "llama_cli_v1A_secda_q2q3q6",
+        "acc_tag": "BFPP_KRIA_v1.0A_q2q3q6",
+        "bins": "bin_q2q3q6",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK2=ON -DSECDA_QK3=ON -DSECDA_QK6=ON -DSECDA_BFPP_ACC_V3=ON"
+    },
+    "q2q3q4q5q6v1.0A": {
+        "bitstreams": "BFP_Q2Q3Q4Q5Q6_v1",
+        "binaries": "llama_cli_v1A_secda_q2q3q4q5q6",
+        "acc_tag": "BFPP_KRIA_v1.0A_q2q3q4q5q6",
+        "bins": "bin_q2q3q4q5q6",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK2=ON -DSECDA_QK3=ON -DSECDA_QK4=ON -DSECDA_QK5=ON -DSECDA_QK6=ON -DSECDA_BFPP_ACC_V3=ON"
+    }
+}

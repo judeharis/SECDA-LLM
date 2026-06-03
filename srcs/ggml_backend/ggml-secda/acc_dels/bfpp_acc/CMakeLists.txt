@@ -1,0 +1,18 @@
+message(STATUS "===================BFP ACC===================")
+if (SECDA_BFPP_ACC_V1)
+message(STATUS "v1 IS BROKEN, PLEASE USE v3")
+message(STATUS "Adding bfpp_acc_v1 to build")
+add_subdirectory(v1)
+endif()
+
+if (SECDA_BFPP_ACC_V2)
+message(STATUS "v2 IS BROKEN, PLEASE USE v3")
+message(STATUS "Adding bfpp_acc_v2 to build")
+add_subdirectory(v2)
+endif()
+
+if (SECDA_BFPP_ACC_V3)
+message(STATUS "Adding bfpp_acc_v3 to build")
+add_subdirectory(v3)
+endif()
+message(STATUS "===================BFP ACC===================")

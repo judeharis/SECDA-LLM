@@ -1,0 +1,32 @@
+{
+  "models": [
+    "TinyLlama2Q3S"
+  ],
+  "runtimes": [
+    "q3v2.0A",
+    "q6v2.0A",
+    "q2q3v2.0A",
+    "q2q6v2.0A",
+    "q3q4v2.0A",
+    "q3q5v2.0A",
+    "q3q6v2.0A",
+    "q4q6v2.0A",
+    "q5q6v2.0A",
+    "q2q3q4v2.0A",
+    "q2q3q5v2.0A",
+    "q2q3q6v2.0A",
+    "q2q4q6v2.0A",
+    "q2q5q6v2.0A",
+    "q3q4q5v2.0A",
+    "q3q4q6v2.0A",
+    "q3q5q6v2.0A",
+    "q4q5q6v2.0A",
+    "q2q3q4q5v2.0A",
+    "q2q3q4q6v2.0A",
+    "q2q3q5q6v2.0A",
+    "q2q4q5q6v2.0A",
+    "q3q4q5q6v2.0A",
+    "q2q3q4q5q6v2.0A",
+    "cpuv1.0"
+  ]
+}
