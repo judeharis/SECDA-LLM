@@ -69,7 +69,7 @@ fi
 echo "[compile_send_kria_bfpp] Target board: ${board_addr}, port: ${port}"
 
 #================================================================================================
-workspace_path="/mnt/Crucial/WorkspaceB/LLMs/SECDA_LLM/llama.cpp/"
+workspace_path="/mnt/Crucial/WorkspaceB/SECDA/SECDA-LLM/llama.cpp"
 
 # Helper: configure, build, and send build artifacts to target board
 # Args:

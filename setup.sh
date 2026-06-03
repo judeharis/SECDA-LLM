@@ -25,10 +25,10 @@
 
 
 pushd ./llama.cpp/ggml/src
-ln -s -f ../../../src/ggml_backend/ggml-secda ./ 
+ln -s -f ../../../srcs/ggml_backend/ggml-secda/ ./ 
 popd
 pushd ./llama.cpp/ggml/include
-ln -s -f ../../../src/ggml_backend/ggml-secda.h ./
+ln -s -f ../../../srcs/ggml_backend/ggml-secda.h ./
 popd
 
 
