@@ -240,7 +240,8 @@ void LoadWeights_Preloaded(acc_container *drv, int m, int mstep, int nstep,
 
 void LoadWeights(acc_container *drv, int m, int mstep, int nstep, int kb,
                  char *wgt_block) {
-  if (drv->t.layer_alloced[drv->t.layer]) {
+  // if (drv->t.layer_alloced[drv->t.layer]) {
+  if (drv->t.layer_preloaded[drv->t.layer]) {
     LoadWeights_Preloaded(drv, m, mstep, nstep, kb, wgt_block);
   } else {
     LoadWeights_Inference(drv, m, mstep, nstep, kb, wgt_block);

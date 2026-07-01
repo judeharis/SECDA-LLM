@@ -21,6 +21,8 @@ void updateProfile(long long nanoseconds);
 
 // void updateProfile(double time);
 
+bool checkDim(int M, int N, int K);
+
 bool preloadWeights(unsigned wgt_size, int layer, int M, int K, const void *wgt,
                     int wgt_type);
 

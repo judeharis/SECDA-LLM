@@ -177,6 +177,35 @@ void MM(acc_container *drv) {
 #endif
 }
 
+static bool DimCheck(int M, int N, int K) {
+
+    // kb is the number of blocks in the K dimension
+  int kb = K / QK_K;
+
+  // tile_kmb is the number of blocks in the K dimension that can be stored in
+  // the weight buffer
+  uint32_t tile_kmb = roundDown(min((SUP_KMB), M * kb), kb);
+
+  // tile_knb is the number of blocks in the K dimension that can be stored in
+  // the input buffer
+  uint32_t tile_knb = roundDown(min((SUP_KNB), N * kb), kb);
+  uint32_t tile_m = tile_kmb / kb;
+  uint32_t tile_n = tile_knb / kb;
+
+  if ((N * kb) > SUP_KNB){
+    cerr << "Input data exceeds SBVP input buffer" << endl;
+    return false;
+  }
+  if (tile_m <= 1){
+    cerr << "Weight block x depth exceeds SBVP weight buffer" << endl;
+    return false;
+  }
+  // assert((N * kb) <= SUP_KNB && "Input data exceeds SBVP input buffer");
+  // assert(tile_m >= 1 && "Weight block x depth exceeds SBVP weight buffer");
+
+  return true;
+}
+
 // m = wgt_rows, n = inp_cols, k = depth
 static void EntryMM(const void *wgt, const void *inp, void *out, int M, int N,
                     int K, int inp_stride, int wgt_stride, int out_stride,

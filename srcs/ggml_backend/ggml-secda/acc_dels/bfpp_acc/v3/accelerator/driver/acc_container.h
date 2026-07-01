@@ -20,9 +20,9 @@
 
 // #define ACC_PRELOAD
 #ifdef ACC_PRELOAD
-#define LAYER_PREALLOC 500
+#define LAYER_PREALLOC true
 #else
-#define LAYER_PREALLOC 0
+#define LAYER_PREALLOC false
 #endif
 
 // #define PRINT_FILE
@@ -146,7 +146,8 @@ struct layer_details {
 
   unsigned int curr_offset = 0;
 
-  bool layer_alloced[500];
+  // bool layer_alloced[500];
+  vector<bool> layer_preloaded;
   int dma_size_list[DMA_COUNT];
   uint32_t curr_offsets[DMA_COUNT];
 
@@ -156,9 +157,10 @@ struct layer_details {
   vector<map<int, tuple<uint32_t, uint32_t>>> tile_offset_map_D;
 
   layer_details() {
-    for (int i = 0; i < 500; i++) {
-      layer_alloced[i] = false;
-    }
+    // for (int i = 0; i < 500; i++) {
+    //   layer_alloced[i] = false;
+    // }
+    layer_preloaded.resize(500, false);
     for (int i = 0; i < DMA_COUNT; i++) {
       dma_size_list[i] = 0;
       curr_offsets[i] = 0;
@@ -187,12 +189,15 @@ struct layer_details {
       if (dma_size_list[i] + curr_offsets[i] > DMA_WGT_SIZE)
         alloc_allowed = false;
     }
-    if (!alloc_allowed || alloced_layers >= LAYER_PREALLOC) {
+    if (!alloc_allowed || !LAYER_PREALLOC) {
       alloc_allowed = false;
       return false;
     }
 
-    layer_alloced[layer] = true;
+    // layer_alloced[layer] = true;
+    if (layer_preloaded.size() <= layer) layer_preloaded.resize(layer + 1, false);
+    layer_preloaded[layer] = true;
+
     alloced_layers++;
     return true;
   }

@@ -31,6 +31,8 @@ bool preloadWeights(unsigned wgt_size, int layer, int M, int K, const void *wgt,
   return bfpp_acc::preloadWeights(wgt_size, layer, M, K, wgt, wgt_type);
 }
 
+bool checkDim(int M, int N, int K) { return bfpp_acc::DimCheck(M, N, K); }
+
 void EntryMM(const void *inp, const void *wgt, void *out, int M, int N, int K,
              int inp_stride, int wgt_stride, int out_stride, int wgt_type) {
   bfpp_acc::EntryMM(inp, wgt, out, M, N, K, inp_stride, wgt_stride, out_stride,

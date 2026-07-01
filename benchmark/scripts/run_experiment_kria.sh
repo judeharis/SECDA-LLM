@@ -15,24 +15,20 @@ accelerated=("${accelerated_array[@]}")
 threads=(1)
 # threads=(1)
 
-# path
-path="/home/ubuntu/Workspace/secda_llm"
+# board_path
+board_path="/home/ubuntu/Workspace/secda_llm"
+board_sub="benchmark"
 
 # create accelerated or not accelerated array
 
 # create a loop for each model
 run_arg='--single-turn --no-warmup --temp 0 -s 1712523969 -p "what is my name?" --log-file "${mn}_${thread}_${tag}"'
-num_runs=10
+num_runs=20
+temp=10
 
 rm -f ./commands.txt
 touch ./commands.txt
 
-# source "/usr/local/share/pynq-venv/bin/activate"
-# export PYNQ_JUPYTER_NOTEBOOKS=/root/jupyter_notebooks
-# export BOARD=KV260
-# export XILINX_XRT=/usr
-# export PATH=$PATH:/usr/local/share/pynq-venv/bin/microblazeel-xilinx-elf/bin/
-# python3 /usr/local/share/pynq-venv/pynq-dts/insert_dtbo.py
 echo "Running Experiment for Kria"
 
 function error_exit {
@@ -47,12 +43,33 @@ function error_exit {
   exit 1
 }
 
-trap 'error_exit "An error occurred. Exiting."' ERR
+trap 'error_exit ${LINENO} ${BASH_SOURCE}' ERR
 
 echo "-----------------------------------------------------------"
 echo "Clear UDMA"
 echo "-----------------------------------------------------------"
-/home/ubuntu/udma.sh
+                          
+cat /proc/meminfo | grep -i cma
+clear_udmabuf_if_exists() {
+  local idx="$1"
+  if [ -e "/dev/udmabuf${idx}" ]; then
+    echo "delete udmabuf${idx}" > /dev/u-dma-buf-mgr
+    echo "Cleared /dev/udmabuf${idx}"
+  fi
+}
+clear_all_udmabuf() {
+  local dev idx
+
+  for dev in /dev/udmabuf*; do
+    [ -e "$dev" ] || continue
+    idx="${dev#/dev/udmabuf}"
+    [ -n "$idx" ] || continue
+    clear_udmabuf_if_exists "$idx"
+  done
+}
+clear_all_udmabuf
+cat /proc/meminfo | grep -i cma
+bash -i -c 'cd /home/ubuntu/bitstreams/ && python3 ~/load_bitstream.py CPU_1_0.bit'
 
 mn_count=0
 for model in "${models[@]}"; do
@@ -80,21 +97,21 @@ for model in "${models[@]}"; do
       # Run ACC
       if [ $acc == true ]; then
         # Map ACC
-        echo "python3 ~/load_bitstream.py /home/ubuntu/Workspace/secda_llm/bitstreams/$bitstream.bit" >>commands.txt
-        python3 ~/load_bitstream.py /home/ubuntu/Workspace/secda_llm/bitstreams/$bitstream.bit
+        echo "python3 ~/load_bitstream.py $board_path/bitstreams/$bitstream.bit" >>commands.txt
+        python3 ~/load_bitstream.py $board_path/bitstreams/$bitstream.bit
         sudo sh -c "/bin/echo 3 > /proc/sys/vm/drop_caches" && sleep 3
       fi
       # Run ACC and pipe to file
-      cd ${path}/bfpp/
-      chmod +x log_power_KRIA.sh
-      ./log_power_KRIA.sh ../results/${mn}_${thread}_${tag}_power.txt &
-      cd ${path}/bfpp/${bin_folder}
+      cd ${board_path}/${board_sub}/
+      mkdir -p results
+      # chmod +x log_power_KRIA.sh
+      # ./log_power_KRIA.sh ../results/${mn}_${thread}_${tag}_power.txt &
+      cd ${board_path}/${board_sub}/${bin_folder}
 
       chmod +x ./${binary}
-      echo sudo ./${binary} -m ${path}/models/${model} -n ${num_runs} -t ${thread} ${run_arg} >>../commands.txt
-      # sudo ./${binary} -m ${path}/models/${model} -n ${num_runs} -t ${thread} ${run_arg} >../results/${model}-${thread}-${binary}.txt 2>&1
-      ./${binary} -m ${path}/models/${model} -n ${num_runs} -t ${thread} --single-turn --no-warmup --temp 0 -s 1712523969 -p "what is my name?" --log-file "${mn}_${thread}_${tag}" 2>&1 | tee ../results/${mn}_${thread}_${tag}.txt
-      echo  "cd ${path}/bfpp/${bin_folder} && ./${binary} -m ${path}/models/${model} -n ${num_runs} -t ${thread} ${run_arg} >../results/${model}-${thread}-${binary}.txt 2>&1" >>../commands.txt
+      echo sudo ./${binary} -m ${board_path}/models/${model} -n ${num_runs} -t ${thread} ${run_arg} >>../commands.txt
+      ./${binary} -m ${board_path}/models/${model} -n ${num_runs} -t ${thread} --single-turn --no-warmup --temp ${temp} -s 1712523969 -p "what is my name?" --log-file "${mn}_${thread}_${tag}" 2>&1 | tee ../results/${mn}_${thread}_${tag}.txt
+      echo  "cd ${board_path}/$board_sub/${bin_folder} && ./${binary} -m ${board_path}/models/${model} -n ${num_runs} -t ${thread} ${run_arg} >../results/${model}-${thread}-${binary}.txt 2>&1" >>../commands.txt
       
       # this geneates a prf.csv file and a llama_perf.csv file, move it to the results folder
       if [ $acc == true ]; then
@@ -125,5 +142,3 @@ bash -i -c 'cd /home/ubuntu/Workspace/secda_llm/bitstreams && python3 ~/load_bit
 rm -f sds_trace_data.dat
 
 #================================================================================================
-# echo "perf stat -r 1 -x, -o perf-results-tmp.csv -e ${PEVENTS_ALL} ./${binary} -m ${path}/models/${model} -n ${num_runs} -t ${thread} ${run_arg} 2>&1 | tee ../results/${model}-${thread}-${binary}.txt"
-# sudo perf stat -r 1 -x, -o perf-results-tmp.csv -e ${PEVENTS_ALL} ./${binary} -m ${path}/models/${model} -n ${num_runs} -t ${thread} ${run_arg} 2>&1 | tee ../results/${model}-${thread}-${binary}.txt

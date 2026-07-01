@@ -163,7 +163,7 @@ void MM(acc_container *drv) {
   unsigned long long weight_transfer_time_ns = (weight_transfer_cycles * 5);
   float send_speed = drv->mdma->dmas[0].get_send_bandwidth();
   float recv_speed = drv->mdma->dmas[0].get_recv_bandwidth();
-  bool preloaded = drv->t.layer_alloced[drv->t.layer];
+  bool preloaded = drv->t.layer_preloaded[drv->t.layer];
   drv->mdma->dmas[0].profile_reset();
   std::ofstream file("layers.csv", std::ios::app);
   file << dparams.layer << ", " << M << ", " << N << ", " << K << ", "
@@ -175,6 +175,35 @@ void MM(acc_container *drv) {
        << endl;
   file.close();
 #endif
+}
+
+static bool DimCheck(int M, int N, int K) {
+
+    // kb is the number of blocks in the K dimension
+  int kb = K / QK_K;
+
+  // tile_kmb is the number of blocks in the K dimension that can be stored in
+  // the weight buffer
+  uint32_t tile_kmb = roundDown(min((SUP_KMB), M * kb), kb);
+
+  // tile_knb is the number of blocks in the K dimension that can be stored in
+  // the input buffer
+  uint32_t tile_knb = roundDown(min((SUP_KNB), N * kb), kb);
+  uint32_t tile_m = tile_kmb / kb;
+  uint32_t tile_n = tile_knb / kb;
+
+  if ((N * kb) > SUP_KNB){
+    // cerr << "Input data exceeds SBVP input buffer" << endl;
+    return false;
+  }
+  if (tile_m <= 1){
+    // cerr << "Weight block x depth exceeds SBVP weight buffer" << endl;
+    return false;
+  }
+  // assert((N * kb) <= SUP_KNB && "Input data exceeds SBVP input buffer");
+  // assert(tile_m >= 1 && "Weight block x depth exceeds SBVP weight buffer");
+
+  return true;
 }
 
 // m = wgt_rows, n = inp_cols, k = depth
@@ -195,7 +224,7 @@ static void EntryMM(const void *wgt, const void *inp, void *out, int M, int N,
   drv->out_stride = out_stride;
   drv->wgt_type = wgt_type;
   drv->a_t = a_t;
-  bool preloaded = drv->t.layer_alloced[drv->t.layer];
+  bool preloaded = drv->t.layer_preloaded[drv->t.layer];
 
   // cout << endl << "===========================" << endl;
   // cout << "BFPP_ACC || Pre-ACC Info" << endl;
@@ -208,7 +237,7 @@ static void EntryMM(const void *wgt, const void *inp, void *out, int M, int N,
   // cout << "wgt_stride: " << wgt_stride << endl;
   // cout << "out_stride: " << out_stride << endl;
   // cout << "wgt_type: " << wgt_type << endl;
-  // std::cout << "===========================" << std::endl;
+  // cout << "===========================" << endl;
 
   drv->hwc->reset_hwc(); // Reset HWC
   prf_start(1);          // Start profiling the driver

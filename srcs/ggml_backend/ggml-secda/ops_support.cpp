@@ -15,8 +15,9 @@
 
 bool load = true;
 
-// // placeholder 
-// void quantize_row_q8_K(const float * GGML_RESTRICT x, void * GGML_RESTRICT y, int64_t k) {
+// // placeholder
+// void quantize_row_q8_K(const float * GGML_RESTRICT x, void * GGML_RESTRICT y,
+// int64_t k) {
 //     quantize_row_q8_K_ref(x, y, k);
 // }
 
@@ -24,6 +25,8 @@ bool preload_weights_alloc(unsigned wgt_size, int layer, int M, int K,
                            const void *wgt, int wgt_type) {
   return preloadWeights(wgt_size, layer, M, K, wgt, wgt_type);
 }
+
+bool dim_check(int M, int N, int K) { return checkDim(M, N, K); }
 
 void initSECDA_ACC() { initACC(); }
 
@@ -116,7 +119,8 @@ void ggml_secda_mul_mat(ggml_secda_context *ctx, struct ggml_tensor *dst) {
           quantize_row_q8_K_ref(
               (float *)((char *)src1->data + i13 * nb13 + i12 * nb12 +
                         i11 * nb11),
-              (block_q8_K *)(wdata + i13 * nbw3 + i12 * nbw2 + i11 * nbw1), ne10);
+              (block_q8_K *)(wdata + i13 * nbw3 + i12 * nbw2 + i11 * nbw1),
+              ne10);
           // #endif
         }
       }

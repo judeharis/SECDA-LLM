@@ -10,6 +10,8 @@
 // #define GGML_COMMON_DECL_C
 #include "ggml-quants.h"
 
+bool dim_check(int M, int N, int K);
+
 void initSECDA_ACC();
 
 void updatePlan_T(int supported_nodes);

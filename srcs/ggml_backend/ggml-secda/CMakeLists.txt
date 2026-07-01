@@ -83,7 +83,10 @@ if (GGML_SECDA)
     # Add the ggml-secda library to llama.cpp
     ggml_add_backend_library(ggml-secda ${GGML_SOURCES_SECDA} ${GGML_HEADERS_SECDA})
     target_link_libraries(ggml-secda PRIVATE ${SECDA_TOOLS_LIBRARIES} ${SYSC_LIBRARIES} ${GGML_SECDA_ACC})
-    target_include_directories(ggml-secda PRIVATE ${SECDA_TOOLS_INCLUDES})
+    target_include_directories(ggml-secda PRIVATE
+        ${SECDA_TOOLS_INCLUDES}
+        ${CMAKE_SOURCE_DIR}/ggml/src
+    )
     target_link_directories(ggml-secda PRIVATE ${GGML_SECDA_ACC})
     message(STATUS "===================GGML_SECDA====================")
 endif()

@@ -1,6 +1,6 @@
 #include "ggml-secda.h"
-#include "ggml-impl.h"
 #include "ggml-backend-impl.h"
+#include "ggml-impl.h"
 
 #include "ops_support.h"
 
@@ -12,7 +12,10 @@
 struct ggml_backend_plan_secda {
   int supported_nodes = 0;
   int preloaded_nodes = 0;
+  bool planned = false;
 };
+
+static struct ggml_backend_plan_secda secda_plan;
 
 // ************************************* //
 // backend interface
@@ -33,21 +36,13 @@ static void ggml_secda_free(ggml_backend_t backend) {
 static ggml_backend_graph_plan_t
 ggml_secda_graph_plan_create(ggml_backend_t backend,
                              const struct ggml_cgraph *cgraph) {
+
+  if (secda_plan.planned) return &secda_plan;
   std::cout << std::endl;
   std::cout
       << "================================================================"
       << std::endl;
   std::cout << "SECDA Graph Plan Create" << std::endl;
-  struct ggml_backend_plan_secda *secda_plan = new ggml_backend_plan_secda;
-
-  for (int i = 0; i < cgraph->n_nodes; i++) {
-    struct ggml_tensor *node = cgraph->nodes[i];
-    bool node_supported = ggml_backend_supports_op(backend, node);
-    if (node_supported) {
-      secda_plan->supported_nodes++;
-    }
-  }
-  updatePlan_T(secda_plan->supported_nodes);
 
   // Code to to preload weights
   // Need to adapt to support different MatMul Quantization types
@@ -63,43 +58,34 @@ ggml_secda_graph_plan_create(ggml_backend_t backend,
       const int64_t K = src1->ne[0];
       const int64_t M = node->ne[0];
       int wgt_type = 3;
-      if (type == GGML_TYPE_Q6_K)
-        wgt_type = 6;
-      if (type == GGML_TYPE_Q5_K)
-        wgt_type = 5;
-      if (type == GGML_TYPE_Q4_K)
-        wgt_type = 4;
-      if (type == GGML_TYPE_Q3_K)
-        wgt_type = 3;
-      if (type == GGML_TYPE_Q2_K)
-        wgt_type = 2;
+      if (type == GGML_TYPE_Q6_K) wgt_type = 6;
+      if (type == GGML_TYPE_Q5_K) wgt_type = 5;
+      if (type == GGML_TYPE_Q4_K) wgt_type = 4;
+      if (type == GGML_TYPE_Q3_K) wgt_type = 3;
+      if (type == GGML_TYPE_Q2_K) wgt_type = 2;
 
       int64_t weight_size = 0;
-      if (wgt_type == 6)
-        weight_size = M * (K / 256) * sizeof(block_q6_K) + 64;
-      if (wgt_type == 5)
-        weight_size = M * (K / 256) * sizeof(block_q5_K) + 64;
-      if (wgt_type == 4)
-        weight_size = M * (K / 256) * sizeof(block_q4_K) + 64;
-      if (wgt_type == 3)
-        weight_size = M * (K / 256) * sizeof(block_q3_K) + 64;
-      if (wgt_type == 2)
-        weight_size = M * (K / 256) * sizeof(block_q2_K) + 64;
+      if (wgt_type == 6) weight_size = M * (K / 256) * sizeof(block_q6_K) + 64;
+      if (wgt_type == 5) weight_size = M * (K / 256) * sizeof(block_q5_K) + 64;
+      if (wgt_type == 4) weight_size = M * (K / 256) * sizeof(block_q4_K) + 64;
+      if (wgt_type == 3) weight_size = M * (K / 256) * sizeof(block_q3_K) + 64;
+      if (wgt_type == 2) weight_size = M * (K / 256) * sizeof(block_q2_K) + 64;
 
       bool preloaded = preload_weights_alloc(weight_size, layer++, M, K,
                                              src0->data, wgt_type);
-      if (preloaded)
-        secda_plan->preloaded_nodes++;
+      if (preloaded) secda_plan.preloaded_nodes++;
+      secda_plan.supported_nodes++;
     }
   }
+  updatePlan_T(secda_plan.supported_nodes);
 
-  std::cout << "SECDA Supported nodes: " << secda_plan->supported_nodes
-            << " Preloaded nodes: " << secda_plan->preloaded_nodes << std::endl;
+  std::cout << "SECDA Supported nodes: " << secda_plan.supported_nodes
+            << " Preloaded nodes: " << secda_plan.preloaded_nodes << std::endl;
   std::cout
       << "================================================================"
       << std::endl;
-
-  return secda_plan;
+  secda_plan.planned = true;
+  return &secda_plan;
 }
 
 static enum ggml_status ggml_secda_graph_compute(ggml_backend_t backend,
@@ -110,20 +96,15 @@ static enum ggml_status ggml_secda_graph_compute(ggml_backend_t backend,
     struct ggml_tensor *node = cgraph->nodes[i];
 
     switch (node->op) {
-    case GGML_OP_MUL_MAT:
-      ggml_secda_mul_mat(ctx, node);
-      break;
+    case GGML_OP_MUL_MAT: ggml_secda_mul_mat(ctx, node); break;
 
-    case GGML_OP_OUT_PROD:
-      ggml_secda_out_prod(ctx, node);
-      break;
+    case GGML_OP_OUT_PROD: ggml_secda_out_prod(ctx, node); break;
 
     case GGML_OP_NONE:
     case GGML_OP_RESHAPE:
     case GGML_OP_VIEW:
     case GGML_OP_PERMUTE:
-    case GGML_OP_TRANSPOSE:
-      break;
+    case GGML_OP_TRANSPOSE: break;
 
     default:
       GGML_ABORT("%s: unsupported op %s\n", __func__, ggml_op_desc(node));
@@ -179,7 +160,8 @@ bool ggml_backend_is_secda(ggml_backend_t backend) {
   return backend != NULL && ggml_guid_matches(backend->guid, ggml_secda_guid());
 }
 
-void ggml_backend_secda_set_n_threads(ggml_backend_t backend_secda, int n_threads) {
+void ggml_backend_secda_set_n_threads(ggml_backend_t backend_secda,
+                                      int n_threads) {
   GGML_ASSERT(ggml_backend_is_secda(backend_secda));
 
   ggml_secda_context *ctx = (ggml_secda_context *)backend_secda->context;
@@ -196,15 +178,16 @@ static const char *ggml_backend_secda_device_get_name(ggml_backend_dev_t dev) {
   GGML_UNUSED(dev);
 }
 
-static const char *ggml_backend_secda_device_get_description(ggml_backend_dev_t dev) {
+static const char *
+ggml_backend_secda_device_get_description(ggml_backend_dev_t dev) {
 
   return "SECDA";
 
   GGML_UNUSED(dev);
 }
 
-static void ggml_backend_secda_device_get_memory(ggml_backend_dev_t dev, size_t *free,
-                                         size_t *total) {
+static void ggml_backend_secda_device_get_memory(ggml_backend_dev_t dev,
+                                                 size_t *free, size_t *total) {
   // TODO
   *free = 0;
   *total = 0;
@@ -219,12 +202,14 @@ ggml_backend_secda_device_get_type(ggml_backend_dev_t dev) {
   GGML_UNUSED(dev);
 }
 
-static void ggml_backend_secda_device_get_props(ggml_backend_dev_t dev,
-                                        struct ggml_backend_dev_props *props) {
+static void
+ggml_backend_secda_device_get_props(ggml_backend_dev_t dev,
+                                    struct ggml_backend_dev_props *props) {
   props->name = ggml_backend_secda_device_get_name(dev);
   props->description = ggml_backend_secda_device_get_description(dev);
   props->type = ggml_backend_secda_device_get_type(dev);
-  ggml_backend_secda_device_get_memory(dev, &props->memory_free, &props->memory_total);
+  ggml_backend_secda_device_get_memory(dev, &props->memory_free,
+                                       &props->memory_total);
   props->caps = {
       /* .async                 = */ false,
       /* .host_buffer           = */ false,
@@ -233,8 +218,9 @@ static void ggml_backend_secda_device_get_props(ggml_backend_dev_t dev,
   };
 }
 
-static ggml_backend_t ggml_backend_secda_device_init_backend(ggml_backend_dev_t dev,
-                                                     const char *params) {
+static ggml_backend_t
+ggml_backend_secda_device_init_backend(ggml_backend_dev_t dev,
+                                       const char *params) {
   return ggml_backend_secda_init();
 
   GGML_UNUSED(dev);
@@ -248,17 +234,17 @@ ggml_backend_secda_device_get_buffer_type(ggml_backend_dev_t dev) {
   GGML_UNUSED(dev);
 }
 
-static ggml_backend_buffer_t
-ggml_backend_secda_device_buffer_from_host_ptr(ggml_backend_dev_t dev, void *ptr,
-                                       size_t size, size_t max_tensor_size) {
+static ggml_backend_buffer_t ggml_backend_secda_device_buffer_from_host_ptr(
+    ggml_backend_dev_t dev, void *ptr, size_t size, size_t max_tensor_size) {
   return ggml_backend_cpu_buffer_from_ptr(ptr, size);
 
   GGML_UNUSED(dev);
   GGML_UNUSED(max_tensor_size);
 }
 
-static bool ggml_backend_secda_device_supports_op(ggml_backend_dev_t dev,
-                                          const struct ggml_tensor *op) {
+static bool
+ggml_backend_secda_device_supports_op(ggml_backend_dev_t dev,
+                                      const struct ggml_tensor *op) {
   switch (op->op) {
 
   case GGML_OP_MUL_MAT: {
@@ -307,12 +293,30 @@ static bool ggml_backend_secda_device_supports_op(ggml_backend_dev_t dev,
     bool s1_type = src1->type == GGML_TYPE_F32;
     bool is_supported = s0_con && s1_con && s1_type && s0_type;
 
+    // Dimension checks
+    // int K = src1->ne[0];
+    // int M = src0->ne[0];
+    // int N = op->ne[1];
+
+    const int64_t M = src0->ne[1];
+    const int64_t N = src1->ne[1];
+    const int64_t K = src1->ne[0];
+
+    bool dim_ok = dim_check(M, N, K);
+    // if (!dim_ok) {
+    //   std::cout << "SECDA: Dimension check failed for M=" << M << ", N=" << N
+    //             << ", K=" << K << std::endl;
+    // } else {
+    //   std::cout << "SECDA: Dimension check passed for M=" << M << ", N=" << N
+    //             << ", K=" << K << std::endl;
+    // }
+    is_supported = is_supported && dim_ok;
+
     // return false;
     return is_supported;
   }
 
-  default:
-    return false;
+  default: return false;
   }
 
   GGML_UNUSED(dev);
@@ -322,8 +326,9 @@ static bool ggml_backend_secda_device_supports_op(ggml_backend_dev_t dev,
 // There is a check which checks if the device supports the buffer type
 // Right now, the only buffer type is host buffer, so we can just return true
 // But in the future, we might want to make sure the data is move to DMA buffer
-static bool ggml_backend_secda_device_supports_buft(ggml_backend_dev_t dev,
-                                            ggml_backend_buffer_type_t buft) {
+static bool
+ggml_backend_secda_device_supports_buft(ggml_backend_dev_t dev,
+                                        ggml_backend_buffer_type_t buft) {
   return ggml_backend_buft_is_host(buft);
 
   GGML_UNUSED(dev);
