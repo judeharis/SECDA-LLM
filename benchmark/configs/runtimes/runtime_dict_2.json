@@ -246,5 +246,13 @@
         "bins": "bin_q2q3q4q5q6",
         "accelerated": "true",
         "bin_flags": "-DSECDA_QK2=ON -DSECDA_QK3=ON -DSECDA_QK4=ON -DSECDA_QK5=ON -DSECDA_QK6=ON -DSECDA_BFPP_ACC_V3=ON"
+    },
+    "q2q3q4q5q6v2.0B": {
+        "bitstreams": "BFP_Q2Q3Q4Q5Q6_v2",
+        "binaries": "llama_cli_v2B_secda_q2q3q4q5q6",
+        "acc_tag": "BFPP_KRIA_v2.0B_q2q3q4q5q6",
+        "bins": "binB_q2q3q4q5q6",
+        "accelerated": "true",
+        "bin_flags": "-DACC_PRELOAD=OFF -DSECDA_QK2=ON -DSECDA_QK3=ON -DSECDA_QK4=ON -DSECDA_QK5=ON -DSECDA_QK6=ON -DSECDA_BFPP_ACC_V3=ON"
     }
 }

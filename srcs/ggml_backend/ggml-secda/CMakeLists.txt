@@ -13,8 +13,27 @@ if (GGML_SECDA)
     set(CMAKE_CXX_STANDARD 17)
     message(STATUS "===================GGML_SECDA====================")
 
-    # SECDA_TOOLS is a library that provides tools and utilities for SECDA
-    find_package(SECDA_TOOLS REQUIRED)
+    # Prefer bundled secda_tools targets from the wrapper build when present.
+    if (BUILD_KRIA AND TARGET secda_tools_kria)
+        set(SECDA_TOOLS_LIBRARIES secda_tools_kria)
+    elseif (NOT BUILD_ARM AND TARGET secda_tools_sim)
+        set(SECDA_TOOLS_LIBRARIES secda_tools_sim)
+    elseif (TARGET secda_tools)
+        set(SECDA_TOOLS_LIBRARIES secda_tools)
+    endif()
+
+    if (TARGET secda_tools_sim)
+        set(SECDA_TOOLS_SIM_LIBRARIES secda_tools_sim)
+    endif()
+
+    if (DEFINED SECDA_LLM_SECDA_TOOLS_INCLUDE_DIR)
+        set(SECDA_TOOLS_INCLUDES "${SECDA_LLM_SECDA_TOOLS_INCLUDE_DIR}")
+    endif()
+
+    if (NOT SECDA_TOOLS_LIBRARIES OR NOT SECDA_TOOLS_INCLUDES)
+        # SECDA_TOOLS is a library that provides tools and utilities for SECDA.
+        find_package(SECDA_TOOLS REQUIRED)
+    endif()
     message(STATUS "SECDA found, Libraries: ${SECDA_TOOLS_LIBRARIES}")
     message(STATUS "SECDA found, Includes: ${SECDA_TOOLS_INCLUDES}")
 
@@ -56,21 +75,33 @@ if (GGML_SECDA)
         list(APPEND SECDA_ACC_SUPPORT "-DGGML_SECDA_QK6")
     endif()
 
+    if(SECDA_ACC_PROFILE)
+        message(STATUS "SECDA_ACC_PROFILE enabled")
+        list(APPEND SECDA_ACC_SUPPORT "-DSECDA_BACKEND_PRINT -DACC_PROFILE -DDMA_PROFILE -DDMA_PRINT")
+        # list(APPEND SECDA_ACC_SUPPORT "-DACC_PROFILE")
+    endif()
+
     # Handling Accelerators
-    add_subdirectory(acc_dels)
+    # add_subdirectory(acc_dels)
     if (SECDA_BFPP_ACC_V3)
-        message(STATUS "BFPP Accelerator enabled")
+        message(STATUS "BFPP Accelerator V3 enabled")
         list(APPEND GGML_CDEF_PUBLIC BFPP_ACC_V3)
+        list(APPEND SECDA_ACC_SUPPORT BFPP_ACC_V3)
         set(GGML_SECDA_ACC bfpp_acc_v3_driver_connector)
+        
     elseif (SECDA_BFPP_ACC_V2)
-        message(STATUS "BFPP Accelerator enabled")
+        message(STATUS "BFPP Accelerator V2 enabled")
         list(APPEND GGML_CDEF_PUBLIC BFPP_ACC_V2)
+        list(APPEND SECDA_ACC_SUPPORT BFPP_ACC_V2)
         set(GGML_SECDA_ACC bfpp_acc_v2_driver_connector)
     else ()
-        message(STATUS "BFPP Accelerator enabled")
+        message(STATUS "BFPP Accelerator V1 enabled")
         list(APPEND GGML_CDEF_PUBLIC BFPP_ACC_V1)
+        list(APPEND SECDA_ACC_SUPPORT BFPP_ACC_V1)
         set(GGML_SECDA_ACC bfpp_acc_v1_driver_connector)
     endif()
+    add_subdirectory(acc_dels)
+
 
     if (BUILD_ARM)
         list(APPEND GGML_CDEF_PUBLIC GGML_SECDA_ARM)
@@ -84,8 +115,9 @@ if (GGML_SECDA)
     ggml_add_backend_library(ggml-secda ${GGML_SOURCES_SECDA} ${GGML_HEADERS_SECDA})
     target_link_libraries(ggml-secda PRIVATE ${SECDA_TOOLS_LIBRARIES} ${SYSC_LIBRARIES} ${GGML_SECDA_ACC})
     target_include_directories(ggml-secda PRIVATE
+        ${PROJECT_SOURCE_DIR}/src
+        ${PROJECT_SOURCE_DIR}/include
         ${SECDA_TOOLS_INCLUDES}
-        ${CMAKE_SOURCE_DIR}/ggml/src
     )
     target_link_directories(ggml-secda PRIVATE ${GGML_SECDA_ACC})
     message(STATUS "===================GGML_SECDA====================")

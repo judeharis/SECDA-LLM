@@ -179,7 +179,7 @@ void MM(acc_container *drv) {
 
 static bool DimCheck(int M, int N, int K) {
 
-    // kb is the number of blocks in the K dimension
+  // kb is the number of blocks in the K dimension
   int kb = K / QK_K;
 
   // tile_kmb is the number of blocks in the K dimension that can be stored in
@@ -192,11 +192,11 @@ static bool DimCheck(int M, int N, int K) {
   uint32_t tile_m = tile_kmb / kb;
   uint32_t tile_n = tile_knb / kb;
 
-  if ((N * kb) > SUP_KNB){
+  if ((N * kb) > SUP_KNB) {
     // cerr << "Input data exceeds SBVP input buffer" << endl;
     return false;
   }
-  if (tile_m <= 1){
+  if (tile_m <= 1) {
     // cerr << "Weight block x depth exceeds SBVP weight buffer" << endl;
     return false;
   }
@@ -258,19 +258,19 @@ static void EntryMM(const void *wgt, const void *inp, void *out, int M, int N,
     return;
   }
 
-#ifdef PRINT_FILE
-  char buf[256];
-  sprintf(buf, "_aData/cgpt2/out_%d_acc.csv", dparams.layer);
-  FILE *f = fopen(buf, "w");
-  float *res_pointer = (float *)out;
-  for (int r = 0; r < M; r++) {
-    for (int c = 0; c < N; c++) {
-      fprintf(f, "%f,", (float)res_pointer[r * N + c]);
+  #ifdef PRINT_FILE
+    char buf[256];
+    sprintf(buf, "_aData/cgpt2/out_%d_acc.csv", dparams.layer);
+    FILE *f = fopen(buf, "w");
+    float *res_pointer = (float *)out;
+    for (int r = 0; r < M; r++) {
+      for (int c = 0; c < N; c++) {
+        fprintf(f, "%f,", (float)res_pointer[r * N + c]);
+      }
+      fprintf(f, "\n");
     }
-    fprintf(f, "\n");
-  }
-  fclose(f);
-#endif
+    fclose(f);
+  #endif
 
   dparams.layer++;
 }

@@ -1,0 +1,177 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Configure SECDA-nosim-x64",
+            "type": "shell",
+            "command": "cmake --preset SECDA-nosim-x64",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Build llama-cli (SECDA-nosim-x64)",
+            "type": "shell",
+            "command": "cmake --build --preset SECDA-nosim-x64 --target llama-cli -j",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "dependsOn": "Configure SECDA-nosim-x64",
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Build llama-bench (SECDA-nosim-x64)",
+            "type": "shell",
+            "command": "cmake --build --preset SECDA-nosim-x64 --target llama-bench -j",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "dependsOn": "Configure SECDA-nosim-x64",
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Run llama-bench (SECDA-nosim-x64)",
+            "type": "shell",
+            "command": "${workspaceFolder}/out/build/SECDA-nosim-x64/bin/llama-bench -m ${workspaceFolder}/llama.cpp/models/secda_models/Cryptography_GPT_2_v1.0.0.Q2_K.gguf -n 1 -t 1 -p 2",
+            "options": {
+                "cwd": "${workspaceFolder}/llama.cpp"
+            },
+            "dependsOn": "Build llama-bench (SECDA-nosim-x64)",
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Build llama-perplexity (SECDA-nosim-x64)",
+            "type": "shell",
+            "command": "cmake --build --preset SECDA-nosim-x64 --target llama-perplexity -j",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "dependsOn": "Configure SECDA-nosim-x64",
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Build test-backend-ops (SECDA-nosim-x64)",
+            "type": "shell",
+            "command": "cmake --build --preset SECDA-nosim-x64 --target test-backend-ops -j",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "dependsOn": "Configure SECDA-nosim-x64",
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Configure SECDA-sim-x64",
+            "type": "shell",
+            "command": "cmake --preset SECDA-sim-x64",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Build llama-cli (SECDA-sim-x64)",
+            "type": "shell",
+            "command": "cmake --build --preset SECDA-sim-x64 --target llama-cli -j",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "dependsOn": "Configure SECDA-sim-x64",
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Build llama-bench (SECDA-sim-x64)",
+            "type": "shell",
+            "command": "cmake --build --preset SECDA-sim-x64 --target llama-bench -j",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "dependsOn": "Configure SECDA-sim-x64",
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Run llama-bench (SECDA-sim-x64)",
+            "type": "shell",
+            "command": "${workspaceFolder}/out/build/SECDA-sim-x64/bin/llama-bench -m ${workspaceFolder}/llama.cpp/models/secda_models/Cryptography_GPT_2_v1.0.0.Q2_K.gguf -n 1 -t 1 -p 2",
+            "options": {
+                "cwd": "${workspaceFolder}/llama.cpp"
+            },
+            "dependsOn": "Build llama-bench (SECDA-sim-x64)",
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Build llama-perplexity (SECDA-sim-x64)",
+            "type": "shell",
+            "command": "cmake --build --preset SECDA-sim-x64 --target llama-perplexity -j",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "dependsOn": "Configure SECDA-sim-x64",
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Build test-backend-ops (SECDA-sim-x64)",
+            "type": "shell",
+            "command": "cmake --build --preset SECDA-sim-x64 --target test-backend-ops -j",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "dependsOn": "Configure SECDA-sim-x64",
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Configure SECDA-armv7-debug",
+            "type": "shell",
+            "command": "cmake --preset SECDA-armv7-debug",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Build llama-cli (SECDA-armv7-debug)",
+            "type": "shell",
+            "command": "cmake --build --preset SECDA-armv7-debug --target llama-cli -j",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "dependsOn": "Configure SECDA-armv7-debug",
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Configure SECDA-aarch64-debug",
+            "type": "shell",
+            "command": "cmake --preset SECDA-aarch64-debug",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Build llama-cli (SECDA-aarch64-debug)",
+            "type": "shell",
+            "command": "cmake --build --preset SECDA-aarch64-debug --target llama-cli -j",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "dependsOn": "Configure SECDA-aarch64-debug",
+            "group": "build",
+            "problemMatcher": []
+        }
+    ]
+}

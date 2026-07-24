@@ -101,7 +101,7 @@ static void initACC() {
   if (!dparams.init) {
     std::cout << "===========================" << std::endl;
     static struct acc_container _drv;
-    static class acc_times _a_t;
+    static struct acc_times _a_t;
 #ifdef SYSC
     static ACCNAME _acc("FBFP_ACC");
     static struct sysC_sigs scs1(1);

@@ -5,13 +5,6 @@
 #include <cstring>
 #include <mutex>
 
-// #define TOG(X)
-
-// #define TOG2(X) threadsafe_cout(X)
-#define TOG2(X)
-
-#define STR(X) std::to_string(X)
-#define HEX(X) std::hex << X << std::dec
 
 namespace bfpp_acc {
 using namespace std;
@@ -240,8 +233,8 @@ void LoadWeights_Preloaded(acc_container *drv, int m, int mstep, int nstep,
 
 void LoadWeights(acc_container *drv, int m, int mstep, int nstep, int kb,
                  char *wgt_block) {
-  // if (drv->t.layer_alloced[drv->t.layer]) {
-  if (drv->t.layer_preloaded[drv->t.layer]) {
+  if (drv->t.alloced_layers >= drv->t.layer &&
+      drv->t.layer_preloaded[drv->t.layer]) {
     LoadWeights_Preloaded(drv, m, mstep, nstep, kb, wgt_block);
   } else {
     LoadWeights_Inference(drv, m, mstep, nstep, kb, wgt_block);

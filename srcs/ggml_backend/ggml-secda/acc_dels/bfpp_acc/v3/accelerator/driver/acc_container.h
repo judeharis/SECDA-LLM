@@ -18,7 +18,21 @@
 #include "secda_tools/secda_utils/acc_helpers.h"
 #include "secda_tools/secda_utils/utils.h"
 
-// #define ACC_PRELOAD
+
+// #define TOG2(X) threadsafe_cout(X)
+#define TOG2(X)
+
+#define STR(X) std::to_string(X)
+#define HEX(X) std::hex << X << std::dec
+
+// #define DRIVER_PRINT
+#ifdef DRIVER_PRINT
+#define DRIVER_COUT std::cout
+#else
+#define DRIVER_COUT                                                             \
+  if (false) std::cout
+#endif
+
 #ifdef ACC_PRELOAD
 #define LAYER_PREALLOC true
 #else
@@ -140,13 +154,10 @@ struct model_info {
 struct layer_details {
   int layer = 0;
   bool profile = false;
-
   unsigned int alloced_layers = 0;
-  bool alloc_allowed = true;
+  bool alloc_allowed;
 
   unsigned int curr_offset = 0;
-
-  // bool layer_alloced[500];
   vector<bool> layer_preloaded;
   int dma_size_list[DMA_COUNT];
   uint32_t curr_offsets[DMA_COUNT];
@@ -157,9 +168,22 @@ struct layer_details {
   vector<map<int, tuple<uint32_t, uint32_t>>> tile_offset_map_D;
 
   layer_details() {
-    // for (int i = 0; i < 500; i++) {
-    //   layer_alloced[i] = false;
-    // }
+    alloc_allowed = LAYER_PREALLOC;
+    layer_preloaded.resize(500, false);
+    for (int i = 0; i < DMA_COUNT; i++) {
+      dma_size_list[i] = 0;
+      curr_offsets[i] = 0;
+    }
+    tile_offset_map_A.clear();
+    tile_offset_map_B.clear();
+    tile_offset_map_C.clear();
+    tile_offset_map_D.clear();
+  }
+
+  void reset() {
+    alloc_allowed = LAYER_PREALLOC;
+    alloced_layers = 0;
+    curr_offset = 0;
     layer_preloaded.resize(500, false);
     for (int i = 0; i < DMA_COUNT; i++) {
       dma_size_list[i] = 0;
@@ -194,10 +218,8 @@ struct layer_details {
       return false;
     }
 
-    // layer_alloced[layer] = true;
     if (layer_preloaded.size() <= layer) layer_preloaded.resize(layer + 1, false);
     layer_preloaded[layer] = true;
-
     alloced_layers++;
     return true;
   }
@@ -248,7 +270,7 @@ struct acc_container {
   struct layer_details t;
   struct model_info m;
   struct acc_times *a_t;
-  int n = 0;
+  int n = 0; // Number of graphs executed
   int wgt_blk = 0;
   int inp_blk = 0;
 };

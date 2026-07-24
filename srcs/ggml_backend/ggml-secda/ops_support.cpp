@@ -14,12 +14,7 @@
 #include <iostream>
 
 bool load = true;
-
-// // placeholder
-// void quantize_row_q8_K(const float * GGML_RESTRICT x, void * GGML_RESTRICT y,
-// int64_t k) {
-//     quantize_row_q8_K_ref(x, y, k);
-// }
+int file_counter = 0;
 
 bool preload_weights_alloc(unsigned wgt_size, int layer, int M, int K,
                            const void *wgt, int wgt_type) {
@@ -29,6 +24,8 @@ bool preload_weights_alloc(unsigned wgt_size, int layer, int M, int K,
 bool dim_check(int M, int N, int K) { return checkDim(M, N, K); }
 
 void initSECDA_ACC() { initACC(); }
+
+void resetPlan_T() { resetPlan(); }
 
 void updatePlan_T(int supported_nodes) { updatePlan(supported_nodes); }
 
@@ -166,6 +163,35 @@ void ggml_secda_mul_mat(ggml_secda_context *ctx, struct ggml_tensor *dst) {
   // double elapsed_time =
   // std::chrono::duration_cast<std::chrono::nanoseconds>(time1).count();
   // updateProfile(elapsed_time);
+
+  // const int M = ne01;
+  // const int K = ne00;
+  // const int N = ne11;
+  // printf("ggml_compute_forward_mul_mat: M = %ld, K = %ld, N = %ld, qtype = %d\n", M, K, N, wgt_type);
+  // const char *type_name = ggml_type_name(src0->type);
+  // if (type_name != NULL && strcmp(type_name, "f32") != 0) {
+  //   char base_name[512];
+  //   char file_counter_chars[16];
+  //   snprintf(file_counter_chars, sizeof(file_counter_chars), "%d",
+  //            file_counter++);
+  //   snprintf(base_name, sizeof(base_name), "%s_%s", file_counter_chars,
+  //            type_name != NULL ? type_name : "dst");
+  //   char csv_name[512];
+  //   snprintf(csv_name, sizeof(csv_name), "results/%s_acc.csv", base_name);
+
+  //   FILE *fp = fopen(csv_name, "w");
+  //   if (fp != NULL) {
+  //     for (int r = 0; r < M; ++r) {
+  //       for (int c = 0; c < N; ++c) {
+  //         const float v =
+  //             *(const float *)((const char *)dst->data + c * nb1 + r * nb0);
+  //         fprintf(fp, c + 1 < N ? "%f," : "%f", v);
+  //       }
+  //       fputc('\n', fp);
+  //     }
+  //     fclose(fp);
+  //   }
+  // }
 }
 
 void ggml_secda_out_prod(ggml_secda_context *ctx, struct ggml_tensor *dst) {

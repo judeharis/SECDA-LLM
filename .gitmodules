@@ -2,3 +2,6 @@
 	path = llama.cpp
 	url = git@github.com:judeharis/llama.cpp.git
 	branch = secda_updated
+[submodule "secda_tools"]
+	path = secda_tools
+	url = git@github.com:judeharis/secda_tools.git

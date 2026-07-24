@@ -1,0 +1,243 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+    "name":  "base",
+        "hidden": true,
+    "generator": "Ninja",
+    "binaryDir": "${sourceDir}/build/${presetName}",
+        "cacheVariables": {
+      "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+      "CMAKE_INSTALL_RPATH": "$ORIGIN;$ORIGIN/..",
+      "SECDA_LLM_LLAMA_DIR": "${sourceDir}/llama.cpp",
+      "LLAMA_BUILD_COMMON": "ON",
+      "LLAMA_BUILD_TESTS": "ON",
+      "LLAMA_BUILD_TOOLS": "ON",
+      "LLAMA_BUILD_EXAMPLES": "ON",
+      "LLAMA_BUILD_SERVER": "ON",
+      "LLAMA_BUILD_APP": "ON"
+        }
+    },
+    {
+        "name": "sycl-base",
+        "hidden": true,
+        "generator": "Ninja",
+        "binaryDir": "${sourceDir}/build/${presetName}",
+        "cacheVariables": {
+            "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+            "CMAKE_CXX_COMPILER": "icx",
+            "CMAKE_C_COMPILER": "cl",
+            "GGML_SYCL": "ON",
+          "CMAKE_INSTALL_RPATH": "$ORIGIN;$ORIGIN/..",
+          "SECDA_LLM_LLAMA_DIR": "${sourceDir}/llama.cpp"
+        }
+    },
+    { "name": "debug",    "hidden": true, "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" } },
+    { "name": "release",  "hidden": true, "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" } },
+    { "name": "reldbg",   "hidden": true, "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo" } },
+    { "name": "static",   "hidden": true, "cacheVariables": { "GGML_STATIC":      "ON" } },
+    { "name": "sycl_f16", "hidden": true, "cacheVariables": { "GGML_SYCL_F16":    "ON" } },
+    { "name": "vulkan",   "hidden": true, "cacheVariables": { "GGML_VULKAN":      "ON" } },
+
+    {
+        "name": "x64-windows-llvm", "hidden": true,
+        "cacheVariables": {
+          "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/llama.cpp/cmake/x64-windows-llvm.cmake"
+        }
+    },
+
+    {
+        "name": "arm64-windows-llvm", "hidden": true,
+        "architecture": { "value": "arm64",    "strategy": "external" },
+        "toolset":      { "value": "host=x64", "strategy": "external" },
+        "cacheVariables": {
+          "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/llama.cpp/cmake/arm64-windows-llvm.cmake"
+        }
+    },
+
+    {
+        "name": "arm64-apple-clang", "hidden": true,
+        "architecture": { "value": "arm64",    "strategy": "external" },
+        "toolset":      { "value": "host=x64", "strategy": "external" },
+        "cacheVariables": {
+          "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/llama.cpp/cmake/arm64-apple-clang.cmake"
+        }
+    },
+    {
+        "name": "x64-linux-gcc", "hidden": true,
+        "cacheVariables": {
+            "CMAKE_C_COMPILER": "gcc",
+            "CMAKE_CXX_COMPILER": "g++"
+        }
+    },
+    { "name": "x64-linux-gcc-debug", "inherits": [ "base", "x64-linux-gcc", "debug" ] },
+    { "name": "x64-linux-gcc-release", "inherits": [ "base", "x64-linux-gcc", "release" ] },
+    { "name": "x64-linux-gcc-reldbg", "inherits": [ "base", "x64-linux-gcc", "reldbg" ] },
+    { "name": "x64-linux-gcc+static-release", "inherits": [ "base", "x64-linux-gcc", "release", "static" ] },
+
+    { "name": "arm64-windows-llvm-debug", "inherits": [ "base", "arm64-windows-llvm", "debug" ] },
+    { "name": "arm64-windows-llvm-release", "inherits": [ "base", "arm64-windows-llvm", "reldbg" ] },
+    { "name": "arm64-windows-llvm+static-release", "inherits": [ "base", "arm64-windows-llvm", "reldbg", "static" ] },
+
+    { "name": "arm64-apple-clang-debug", "inherits": [ "base", "arm64-apple-clang", "debug" ] },
+    { "name": "arm64-apple-clang-release", "inherits": [ "base", "arm64-apple-clang", "reldbg" ] },
+    { "name": "arm64-apple-clang+static-release", "inherits": [ "base", "arm64-apple-clang",  "reldbg", "static" ] },
+
+    { "name": "x64-windows-llvm-debug", "inherits": [ "base", "x64-windows-llvm", "debug" ] },
+    { "name": "x64-windows-llvm-release", "inherits": [ "base", "x64-windows-llvm", "release" ] },
+    { "name": "x64-windows-llvm-reldbg", "inherits": [ "base", "x64-windows-llvm", "reldbg" ] },
+    { "name": "x64-windows-llvm+static-release", "inherits": [ "base", "x64-windows-llvm", "reldbg", "static" ] },
+
+    { "name": "x64-windows-msvc-debug", "inherits": [ "base", "debug" ] },
+    { "name": "x64-windows-msvc-release", "inherits": [ "base", "reldbg" ] },
+    { "name": "x64-windows-msvc+static-release", "inherits": [ "base", "reldbg", "static" ] },
+
+    { "name": "x64-windows-sycl-debug", "inherits": [ "sycl-base", "debug" ] },
+    { "name": "x64-windows-sycl-debug-f16", "inherits": [ "sycl-base", "debug", "sycl_f16" ] },
+    { "name": "x64-windows-sycl-release", "inherits": [ "sycl-base", "release" ] },
+    { "name": "x64-windows-sycl-release-f16", "inherits": [ "sycl-base", "release", "sycl_f16" ] },
+
+    { "name": "x64-windows-vulkan-debug", "inherits": [ "base", "vulkan", "debug" ] },
+    { "name": "x64-windows-vulkan-release", "inherits": [ "base", "vulkan", "release" ] },
+    {
+      "name": "secda-llm-base",
+      "hidden": true,
+      "inherits": [ "base" ],
+      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
+        "SECDA_LLM_ENABLE_SECDA": "ON",
+        "SECDA_ACC_PROFILE": "ON"
+      }
+    },
+    {
+      "name": "SECDA-nosim-x64",
+      "displayName": "SECDA-nosim-x64",
+      "inherits": [ "secda-llm-base" ],
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "/usr/bin/clang",
+        "CMAKE_CXX_COMPILER": "/usr/bin/clang++",
+        "CMAKE_BUILD_TYPE": "Debug",
+        "SECDA_LLM_ENABLE_SECDA": "OFF",
+        "GGML_SECDA": "OFF",
+        "GGML_PERF": "ON"
+      }
+    },
+    {
+      "name": "SECDA-sim-x64",
+      "displayName": "SECDA-sim-x64",
+      "inherits": [ "secda-llm-base" ],
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "GGML_SECDA": "ON",
+        "BUILD_ARM": "OFF",
+        "SECDA_QK2": "ON",
+        "SECDA_QK3": "ON",
+        "SECDA_QK4": "ON",
+        "SECDA_QK5": "ON",
+        "SECDA_QK6": "ON",
+        "SECDA_BFPP_ACC_V3": "ON",
+        "ACC_PRELOAD": "ON",
+        "GGML_PERF": "ON"
+      }
+    },
+    {
+      "name": "SECDA-armv7-debug",
+      "displayName": "SECDA-armv7-debug",
+      "inherits": [ "secda-llm-base" ],
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "/opt/gcc-arm-8.3-2019.03-x86_64-arm-linux-gnueabihf/bin/arm-linux-gnueabihf-gcc",
+        "CMAKE_CXX_COMPILER": "/opt/gcc-arm-8.3-2019.03-x86_64-arm-linux-gnueabihf/bin/arm-linux-gnueabihf-g++",
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_SYSTEM_PROCESSOR": "armv7",
+        "GGML_SECDA": "ON",
+        "BUILD_ARM": "ON",
+        "SECDA_QK2": "ON",
+        "SECDA_QK3": "ON",
+        "SECDA_QK4": "ON",
+        "SECDA_QK5": "ON",
+        "SECDA_QK6": "ON",
+        "SECDA_BFPP_ACC_V1": "ON"
+      }
+    },
+    {
+      "name": "SECDA-aarch64-debug",
+      "displayName": "SECDA-aarch64-debug",
+      "inherits": [ "secda-llm-base" ],
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "/usr/bin/aarch64-linux-gnu-gcc",
+        "CMAKE_CXX_COMPILER": "/usr/bin/aarch64-linux-gnu-g++",
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_SYSTEM_PROCESSOR": "aarch64",
+        "GGML_SECDA": "ON",
+        "BUILD_ARM": "ON",
+        "SECDA_QK2": "ON",
+        "SECDA_QK3": "ON",
+        "SECDA_QK4": "ON",
+        "SECDA_QK5": "ON",
+        "SECDA_QK6": "ON",
+        "SECDA_BFPP_ACC_V1": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "SECDA-nosim-x64",
+      "configurePreset": "SECDA-nosim-x64"
+    },
+    {
+      "name": "SECDA-sim-x64",
+      "configurePreset": "SECDA-sim-x64"
+    },
+    {
+      "name": "SECDA-armv7-debug",
+      "configurePreset": "SECDA-armv7-debug"
+    },
+    {
+      "name": "SECDA-aarch64-debug",
+      "configurePreset": "SECDA-aarch64-debug"
+    },
+    {
+      "name": "x64-linux-gcc-debug",
+      "configurePreset": "x64-linux-gcc-debug"
+    },
+    {
+      "name": "x64-linux-gcc-release",
+      "configurePreset": "x64-linux-gcc-release"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "test-base",
+      "hidden": true,
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "SECDA-nosim-x64",
+      "configurePreset": "SECDA-nosim-x64",
+      "inherits": [ "test-base" ]
+    },
+    {
+      "name": "SECDA-sim-x64",
+      "configurePreset": "SECDA-sim-x64",
+      "inherits": [ "test-base" ]
+    },
+    {
+      "name": "x64-linux-gcc-debug",
+      "configurePreset": "x64-linux-gcc-debug",
+      "inherits": [ "test-base" ]
+    },
+    {
+      "name": "x64-linux-gcc-release",
+      "configurePreset": "x64-linux-gcc-release",
+      "inherits": [ "test-base" ]
+    }
+  ]
+}

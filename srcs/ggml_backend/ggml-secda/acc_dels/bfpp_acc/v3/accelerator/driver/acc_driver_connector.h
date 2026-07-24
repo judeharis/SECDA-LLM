@@ -9,6 +9,8 @@ extern "C" {
 
 void initACC();
 
+void resetPlan();
+
 void updatePlan(int supported_nodes);
 
 bool modelPlanned();

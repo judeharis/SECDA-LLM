@@ -5,6 +5,16 @@
 
 namespace bfpp_acc {
 
+void resetPlan() {
+  drv->m.supported_nodes = 0;
+  drv->m.planned = false;
+  drv->m.wgt_ptrs.clear();
+  drv->m.wgt_sizes.clear();
+  drv->m.dim_M.clear();
+  drv->m.dim_K.clear();
+  drv->t.reset();
+}
+
 void updatePlan(int supported_nodes) {
   drv->m.supported_nodes = supported_nodes;
   drv->m.planned = true;
@@ -18,6 +28,8 @@ bool modelPlanned() { return drv->m.planned; }
 
 static bool preloadWeights(unsigned wgt_size, int layer, int M, int K,
                            const void *wgt, int wgt_type) {
+  if (drv->t.alloc_allowed == false) return false;
+  prf_start(1);
   char *wgt_char = (char *)wgt;
   drv->m.wgt_ptrs.push_back(wgt_char);
   drv->m.wgt_sizes.push_back(wgt_size);
@@ -47,14 +59,14 @@ static bool preloadWeights(unsigned wgt_size, int layer, int M, int K,
     char *buf_p = DMA_W1;
     int curr_dma = 0;
     uint32_t tile_kmb = roundDown(min((SUP_KMB), M * kb), kb);
-    uint32_t tile_m = tile_kmb / kb;
+    int tile_m = tile_kmb / kb;
     map<int, tuple<uint32_t, uint32_t>> tile_map_A;
     map<int, tuple<uint32_t, uint32_t>> tile_map_B;
     map<int, tuple<uint32_t, uint32_t>> tile_map_C;
     map<int, tuple<uint32_t, uint32_t>> tile_map_D;
 
-    for (uint32_t i = 0; i < M; i += tile_m) {
-      uint32_t mstep = std::min(tile_m, M - i);
+    for (int i = 0; i < M; i += tile_m) {
+      int mstep = std::min(tile_m, M - i);
       int curr_offset_A = drv->t.curr_offsets[0];
       int curr_offset_B = drv->t.curr_offsets[1];
       int curr_offset_C = drv->t.curr_offsets[2];
@@ -117,15 +129,16 @@ static bool preloadWeights(unsigned wgt_size, int layer, int M, int K,
   drv->mdma->dmas[1].dma_sync_mem();
   drv->mdma->dmas[2].dma_sync_mem();
   drv->mdma->dmas[3].dma_sync_mem();
+  prf_end(1, drv->a_t->fpga_wgt_pack);
   return alloced;
 }
 
 static void initACC() {
   // Init SystemC Modules & Profilier
   if (!dparams.init) {
-    std::cout << "===========================" << std::endl;
+    DRIVER_COUT << "===========================" << std::endl;
     static struct acc_container _drv;
-    static class acc_times _a_t;
+    static struct acc_times _a_t;
 #ifdef SYSC
     static ACCNAME _acc("FBFP_ACC");
     static struct sysC_sigs scs1(1);
@@ -142,7 +155,7 @@ static void initACC() {
     ctrl = &ctrl1;
     hwc = &hwc1;
     mdma = &mdma1;
-    std::cout << "Initialised the SystemC Modules" << std::endl;
+    DRIVER_COUT << "Initialised the SystemC Modules" << std::endl;
 #else
     dparams.acc = getAccBaseAddress<int>(acc_ctrl_address, 65536);
     int *acc_ctrl_base = getAccBaseAddress<int>(acc_ctrl_address, 65536);
@@ -158,40 +171,41 @@ static void initACC() {
     hwc = &hwc1;
     mdma = &mdma1;
 #ifdef KRIA
-    std::cout << "Initialised the Kria DMA" << std::endl;
+    DRIVER_COUT << "Initialised the Kria DMA" << std::endl;
 #else
-    std::cout << "Initialised the Z1 DMA" << std::endl;
+    DRIVER_COUT << "Initialised the Z1 DMA" << std::endl;
 #endif
 #endif
-    std::cout << "BFPP Accelerator Driver Version 3";
+    DRIVER_COUT << "BFPP Accelerator Driver Version 3";
 #ifdef ACC_NEON
-    std::cout << " with Neon";
+    DRIVER_COUT << " with Neon";
 #endif
-    std::cout << std::endl;
+    DRIVER_COUT << std::endl;
 
 #if defined(GGML_SECDA_QK2)
-    std::cout << "Support Q2" << std::endl;
+    DRIVER_COUT << "Support Q2" << std::endl;
 #endif
 #if defined(GGML_SECDA_QK3)
-    std::cout << "Support Q3" << std::endl;
+    DRIVER_COUT << "Support Q3" << std::endl;
 #endif
 #if defined(GGML_SECDA_QK4)
-    std::cout << "Support Q4" << std::endl;
+    DRIVER_COUT << "Support Q4" << std::endl;
 #endif
 #if defined(GGML_SECDA_QK5)
-    std::cout << "Support Q5" << std::endl;
+    DRIVER_COUT << "Support Q5" << std::endl;
 #endif
 #if defined(GGML_SECDA_QK6)
-    std::cout << "Support Q6" << std::endl;
+    DRIVER_COUT << "Support Q6" << std::endl;
 #endif
 
-    std::cout << "===========================" << std::endl;
+    DRIVER_COUT << "===========================" << std::endl;
     drv = &_drv;
     a_t = &_a_t;
     drv->acc = acc;
     drv->hwc = hwc;
     drv->ctrl = ctrl;
     drv->mdma = mdma;
+    drv->a_t = a_t;
     drv->profile = &profile;
     drv->mt_context = dparams.mt_context;
     drv->DMA_I1 = drv->mdma->dmas[0].dma_get_inbuffer();

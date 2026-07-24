@@ -2,9 +2,11 @@
 
 This folder contains the SECDA-LLM benchmark flow for building binaries, running experiments on the board, and parsing the collected results.
 
+The scripts now treat the SECDA-LLM repository root as the CMake project entrypoint. They no longer assume `llama.cpp` is the top-level project directory.
+
 ## Main Entry Point
 
-Use `benchmark_suite.sh` to run the benchmark pipeline.
+Use `benchmark_suite.sh` to run the benchmark pipeline from either the repository root or the `benchmark/` directory.
 
 The script reads default board settings from `../config.json` using `jq`:
 
@@ -17,6 +19,7 @@ It combines those values into the remote target and then runs up to three stages
 
 - `-b`: build and send binaries to the board
 - `-r`: copy experiment scripts and run the benchmark on the board
+- `-l` or `--llama-bench`: copy scripts and run FPGA `llama-bench` on the board
 - `-p`: fetch raw results and parse them locally
 
 If you run the script without `-b`, `-r`, or `-p`, it runs all three stages.
@@ -39,6 +42,12 @@ Only run experiments on the board:
 
 ```bash
 ./benchmark_suite.sh -r
+```
+
+Only run FPGA llama-bench on the board:
+
+```bash
+./benchmark_suite.sh -l
 ```
 
 Only fetch and parse results:
@@ -116,9 +125,19 @@ After running the cell, `configs/exp_configs.sh` is updated and the benchmark sc
 
 ## Related Scripts
 
-- `scripts/compile_send_kria.sh`: builds and deploys binaries to the board
+- `scripts/compile_send_kria.sh`: builds and deploys binaries to the board from the SECDA-LLM root project
 - `scripts/run_experiment_kria.sh`: runs the benchmark on the board
 - `scripts/parse_results.py`: parses downloaded benchmark results
+
+## Build and Test Flow
+
+The benchmark pipeline follows the root wrapper project and the top-level `CMakePresets.json`.
+
+1. Generate or refresh `configs/exp_configs.sh` from the notebook.
+2. Run `./benchmark_suite.sh -b` to compile and send binaries from the SECDA-LLM root project.
+3. Run `./benchmark_suite.sh -r` to execute the experiments on the board.
+4. Optional: run `./benchmark_suite.sh -l` to execute FPGA `llama-bench` on the board.
+5. Run `./benchmark_suite.sh -p` to fetch and parse the benchmark outputs locally.
 
 ## Output
 

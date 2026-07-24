@@ -41,5 +41,6 @@
     "Granite4M350Q4M": "granite-4.0-350m-Q4_K_M.gguf",
     "Granite4M350Q5S": "granite-4.0-350m-Q5_K_S.gguf",
     "Granite4M350Q5M": "granite-4.0-350m-Q5_K_M.gguf",
-    "Granite4M350Q6": "granite-4.0-350m-Q6_K.gguf"
+    "Granite4M350Q6": "granite-4.0-350m-Q6_K.gguf",
+    "LFM25M230Q3S": "LFM2.5-230M-Q3_K_S.gguf"
 }

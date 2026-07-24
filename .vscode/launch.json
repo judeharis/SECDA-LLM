@@ -1,0 +1,404 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "(gdb) llama-cli (SECDA-nosim-x64)",
+            "type": "cppdbg",
+            "request": "launch",
+            "preLaunchTask": "Build llama-cli (SECDA-nosim-x64)",
+            "program": "${workspaceFolder}/out/build/SECDA-nosim-x64/bin/llama-cli",
+            "args": [
+                "-m",
+                "./models/secda_models/Cryptography_GPT_2_v1.0.0.Q2_K.gguf",
+                // "./models/secda_models/LFM2.5-230M-Q3_K_S.gguf",
+                "--single-turn",
+                "-n",
+                "10",
+                "-t",
+                "1",
+                "-tb",
+                "1",
+                "--no-warmup",
+                "--temp",
+                "0",
+                "-s",
+                "1712523969",
+                "-p",
+                "what is my name?"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/llama.cpp",
+            "environment": [
+                {
+                    "name": "PATH",
+                    "value": "${env:PATH}:${workspaceFolder}/out/build/SECDA-nosim-x64/bin"
+                }
+            ],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "(gdb) llama-bench (SECDA-nosim-x64)",
+            "type": "cppdbg",
+            "request": "launch",
+            "preLaunchTask": "Build llama-bench (SECDA-nosim-x64)",
+            "program": "${workspaceFolder}/out/build/SECDA-nosim-x64/bin/llama-bench",
+            "args": [
+                "-m",
+                "./models/secda_models/Cryptography_GPT_2_v1.0.0.Q2_K.gguf",
+                "-t",
+                "1",
+                "-pg",
+                "2,2",
+                "-p",
+                "0",
+                "-n",
+                "0",
+                "-b",
+                "1",
+                "-r",
+                "1",
+                "-fa",
+                "0",
+                "-v"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/llama.cpp",
+            "environment": [
+                {
+                    "name": "PATH",
+                    "value": "${env:PATH}:${workspaceFolder}/out/build/SECDA-nosim-x64/bin"
+                }
+            ],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "(gdb) llama-perplexity (SECDA-nosim-x64)",
+            "type": "cppdbg",
+            "request": "launch",
+            "preLaunchTask": "Build llama-perplexity (SECDA-nosim-x64)",
+            "program": "${workspaceFolder}/out/build/SECDA-nosim-x64/bin/llama-perplexity",
+            "args": [
+                "--model",
+                "./models/secda_models/Cryptography_GPT_2_v1.0.0.Q2_K.gguf",
+                "-f",
+                "${workspaceFolder}/perplexity/wikitext-2-raw/wiki.test.raw"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/llama.cpp",
+            "environment": [
+                {
+                    "name": "PATH",
+                    "value": "${env:PATH}:${workspaceFolder}/out/build/SECDA-nosim-x64/bin"
+                }
+            ],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "(gdb) llama-perplexity (SECDA-nosim-x64, debug args)",
+            "type": "cppdbg",
+            "request": "launch",
+            "preLaunchTask": "Build llama-perplexity (SECDA-nosim-x64)",
+            "program": "${workspaceFolder}/out/build/SECDA-nosim-x64/bin/llama-perplexity",
+            "args": [
+                "--model",
+                "./models/secda_models/Cryptography_GPT_2_v1.0.0.Q2_K.gguf",
+                "-f",
+                "${workspaceFolder}/perplexity/wikitext-2-raw/wiki.test.raw",
+                "--threads",
+                "1",
+                "--threads-batch",
+                "1",
+                "--ctx-size",
+                "512",
+                "--batch-size",
+                "64",
+                "--ubatch-size",
+                "64",
+                "--chunks",
+                "1",
+                "--no-warmup",
+                "--no-mmap",
+                "--seed",
+                "1"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/llama.cpp",
+            "environment": [
+                {
+                    "name": "PATH",
+                    "value": "${env:PATH}:${workspaceFolder}/out/build/SECDA-nosim-x64/bin"
+                }
+            ],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "(gdb) test-backend-ops (SECDA-nosim-x64)",
+            "type": "cppdbg",
+            "request": "launch",
+            "preLaunchTask": "Build test-backend-ops (SECDA-nosim-x64)",
+            "program": "${workspaceFolder}/out/build/SECDA-nosim-x64/bin/test-backend-ops",
+            "args": [
+                "perf",
+                "-b",
+                "CPU",
+                "--test-file",
+                "${workspaceFolder}/tests/backend_tests/mul_mat_suite_generated.txt",
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/llama.cpp",
+            "environment": [
+                {
+                    "name": "PATH",
+                    "value": "${env:PATH}:${workspaceFolder}/out/build/SECDA-nosim-x64/bin"
+                }
+            ],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "(gdb) llama-cli",
+            "type": "cppdbg",
+            "request": "launch",
+            "preLaunchTask": "Build llama-cli (SECDA-sim-x64)",
+            "program": "${workspaceFolder}/out/build/SECDA-sim-x64/bin/llama-cli",
+            "args": [
+                "-m",
+                // "./models/secda_models/Cryptography_GPT_2_v1.0.0.Q2_K.gguf",
+                // "./models/secda_models/LFM2.5-230M-Q3_K_S.gguf",
+                "./models/secda_models/tiny-llama-miniguanaco-1.5t.q2_k.gguf",
+                "--single-turn",
+                "-n",
+                "10",
+                "-t",
+                "1",
+                "-tb",
+                "1",
+                "--no-warmup",
+                "--temp",
+                "0",
+                "-s",
+                "1712523969",
+                "-p",
+                "what is my name?"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/llama.cpp",
+            "environment": [
+                {
+                    "name": "PATH",
+                    "value": "${env:PATH}:${workspaceFolder}/out/build/SECDA-sim-x64/bin"
+                }
+            ],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "(gdb) llama-bench (SECDA-sim-x64)",
+            "type": "cppdbg",
+            "request": "launch",
+            "preLaunchTask": "Build llama-bench (SECDA-sim-x64)",
+            "program": "${workspaceFolder}/out/build/SECDA-sim-x64/bin/llama-bench",
+            "args": [
+                "-m",
+                "./models/secda_models/Cryptography_GPT_2_v1.0.0.Q2_K.gguf",
+                // "./models/secda_models/LFM2.5-230M-Q3_K_S.gguf",
+                // "./models/secda_models/tiny-llama-miniguanaco-1.5t.q2_k.gguf",
+                "-t",
+                "1",
+                "-pg",
+                "1,1",
+                "-p",
+                "0",
+                "-n",
+                "0",
+                "-b",
+                "1",
+                "-d",
+                "0",
+                "-r",
+                "1",
+                "--no-warmup",
+                "-v"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/llama.cpp",
+            "environment": [
+                {
+                    "name": "PATH",
+                    "value": "${env:PATH}:${workspaceFolder}/out/build/SECDA-sim-x64/bin"
+                }
+            ],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "(gdb) llama-perplexity",
+            "type": "cppdbg",
+            "request": "launch",
+            "preLaunchTask": "Build llama-perplexity (SECDA-sim-x64)",
+            "program": "${workspaceFolder}/out/build/SECDA-sim-x64/bin/llama-perplexity",
+            "args": [
+                "--model",
+                "./models/secda_models/Cryptography_GPT_2_v1.0.0.Q2_K.gguf",
+                "-f",
+                "${workspaceFolder}/perplexity/wikitext-2-raw/wiki.test.raw"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/llama.cpp",
+            "environment": [
+                {
+                    "name": "PATH",
+                    "value": "${env:PATH}:${workspaceFolder}/out/build/SECDA-sim-x64/bin"
+                }
+            ],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "(gdb) llama-perplexity (SECDA-sim-x64, debug args)",
+            "type": "cppdbg",
+            "request": "launch",
+            "preLaunchTask": "Build llama-perplexity (SECDA-sim-x64)",
+            "program": "${workspaceFolder}/out/build/SECDA-sim-x64/bin/llama-perplexity",
+            "args": [
+                "--model",
+                "./models/secda_models/Cryptography_GPT_2_v1.0.0.Q2_K.gguf",
+                "-f",
+                "${workspaceFolder}/perplexity/wikitext-2-raw/wiki.test.raw",
+                "--threads",
+                "1",
+                "--threads-batch",
+                "1",
+                "--ctx-size",
+                "512",
+                "--batch-size",
+                "64",
+                "--ubatch-size",
+                "64",
+                "--chunks",
+                "1",
+                "--no-warmup",
+                "--no-mmap",
+                "--seed",
+                "1"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/llama.cpp",
+            "environment": [
+                {
+                    "name": "PATH",
+                    "value": "${env:PATH}:${workspaceFolder}/out/build/SECDA-sim-x64/bin"
+                }
+            ],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "(gdb) test-backend-ops",
+            "type": "cppdbg",
+            "request": "launch",
+            "preLaunchTask": "Build test-backend-ops (SECDA-sim-x64)",
+            "program": "${workspaceFolder}/out/build/SECDA-sim-x64/bin/test-backend-ops",
+            "args": [
+                "perf",
+                "-b",
+                "SECDA",
+                "--test-params",
+                "29 0 128 4 1 1 16 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 2 10 256 128 1 1 0 0 0 0 0 256 4 1 1 0 0 0 0 Q2_128M_4N_256K",
+                // "--test-file",
+                // "${workspaceFolder}/tests/backend_tests/matmul_test.txt",
+                // "${workspaceFolder}/tests/backend_tests/mul_mat_suite_generated.txt",
+                // "--output",
+                // "csv"
+                // "-o",
+                // "'MUL_MAT(type_a=q4_K,type_b=f32,m=128,n=1,k=1057,bs=[8,3],nr=[1,1],per=[0,1,2,3],k_v=2113,o=1)'"
+                // "-p",
+                // "'type_a=q4_K,type_b=f32,m=4096'"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/llama.cpp",
+            "environment": [
+                {
+                    "name": "PATH",
+                    "value": "${env:PATH}:${workspaceFolder}/out/build/SECDA-sim-x64/bin"
+                }
+            ],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        }
+    ]
+}

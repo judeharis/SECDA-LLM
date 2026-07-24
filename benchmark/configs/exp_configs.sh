@@ -32,3 +32,9 @@ declare -a runtimes_array=(
   "q2q3q4q5q6v2.0A" 
   "cpuv1.0" 
 )
+declare -a synth_test_names_array=(
+  "Q2_128M_8N_256K" 
+)
+declare -a synth_test_lines_array=(
+  "29 0 128 8 1 1 16 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 2 10 256 128 1 1 0 0 0 0 0 256 8 1 1 0 0 0 0 Q2_128M_8N_256K" 
+)

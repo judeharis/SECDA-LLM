@@ -17,6 +17,8 @@ extern "C" {
 
 void initACC() { bfpp_acc::initACC(); }
 
+void resetPlan() { bfpp_acc::resetPlan(); }
+
 void updatePlan(int supported_nodes) { bfpp_acc::updatePlan(supported_nodes); }
 
 void updateProfile(std::chrono::nanoseconds time) {

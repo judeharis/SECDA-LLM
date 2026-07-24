@@ -1,0 +1,22 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/opt/systemc/systemc-2.3.3/include",
+                "/home/jude/Workspace/SECDA/secda_tools",
+                "/home/jude/Workspace/SECDA/secda_tools/secda_tools"
+            ],
+            "defines": [
+                "SYSC"
+            ],
+            "compilerPath": "/usr/bin/clang++",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "linux-clang-x64",
+            "compileCommands": "${workspaceFolder}/out/build/SECDA-sim-x64/compile_commands.json"
+        }
+    ],
+    "version": 4
+}

@@ -1,2 +1,6 @@
 test_inf/bfpp_results
 test_inf/
+build/
+out/
+benchmark/results/
+_old/

@@ -5,14 +5,52 @@
 #include "ops_support.h"
 
 #include <cstring>
+#include <fstream>
 #include <future>
 #include <iostream>
 #include <vector>
+
+
 
 struct ggml_backend_plan_secda {
   int supported_nodes = 0;
   int preloaded_nodes = 0;
   bool planned = false;
+  int plan_counter = 0;
+  int plan_reused = 0;
+  uint64_t graph_uid = 0;
+
+  void reset() {
+    if (planned) {
+      SECDA_COUT
+          << "================================================================"
+          << std::endl;
+      SECDA_COUT << "SECDA Plan: " << plan_counter << " Reused: " << plan_reused
+                 << " Supported nodes: " << supported_nodes
+                 << " Preloaded nodes: " << preloaded_nodes << std::endl;
+      SECDA_COUT
+          << "================================================================"
+          << std::endl;
+
+      supported_nodes = 0;
+      preloaded_nodes = 0;
+      planned = false;
+      plan_reused = 0;
+      graph_uid = 0;
+    }
+  }
+
+  ~ggml_backend_plan_secda() {
+    SECDA_COUT
+        << "================================================================"
+        << std::endl;
+    SECDA_COUT << "SECDA Plan: " << plan_counter << " Reused: " << plan_reused
+               << " Supported nodes: " << supported_nodes
+               << " Preloaded nodes: " << preloaded_nodes << std::endl;
+    SECDA_COUT
+        << "================================================================"
+        << std::endl;
+  }
 };
 
 static struct ggml_backend_plan_secda secda_plan;
@@ -37,16 +75,32 @@ static ggml_backend_graph_plan_t
 ggml_secda_graph_plan_create(ggml_backend_t backend,
                              const struct ggml_cgraph *cgraph) {
 
-  if (secda_plan.planned) return &secda_plan;
-  std::cout << std::endl;
-  std::cout
+  if (secda_plan.planned && secda_plan.graph_uid == cgraph->uid) {
+    secda_plan.plan_reused++;
+    return &secda_plan;
+  }
+  // if (secda_plan.planned) return &secda_plan;
+  secda_plan.reset();
+  secda_plan.graph_uid = cgraph->uid;
+  resetPlan_T();
+  SECDA_COUT << std::endl;
+  SECDA_COUT
       << "================================================================"
       << std::endl;
-  std::cout << "SECDA Graph Plan Create" << std::endl;
+  SECDA_COUT << "SECDA Graph Plan Create" << std::endl;
 
   // Code to to preload weights
   // Need to adapt to support different MatMul Quantization types
   int layer = 0;
+
+#ifdef SECDA_LOG
+  std::ofstream plans_file("_plans/plans" +
+                               std::to_string(secda_plan.plan_counter) + ".csv",
+                           std::ios::out);
+  plans_file << "plan_count,layer,M,K,N,wgt_type,weight_size,preloaded"
+             << std::endl;
+#endif
+
   for (int i = 0; i < cgraph->n_nodes; i++) {
     struct ggml_tensor *node = cgraph->nodes[i];
     bool node_supported = ggml_backend_supports_op(backend, node);
@@ -57,6 +111,7 @@ ggml_secda_graph_plan_create(ggml_backend_t backend,
 
       const int64_t K = src1->ne[0];
       const int64_t M = node->ne[0];
+
       int wgt_type = 3;
       if (type == GGML_TYPE_Q6_K) wgt_type = 6;
       if (type == GGML_TYPE_Q5_K) wgt_type = 5;
@@ -71,21 +126,44 @@ ggml_secda_graph_plan_create(ggml_backend_t backend,
       if (wgt_type == 3) weight_size = M * (K / 256) * sizeof(block_q3_K) + 64;
       if (wgt_type == 2) weight_size = M * (K / 256) * sizeof(block_q2_K) + 64;
 
-      bool preloaded = preload_weights_alloc(weight_size, layer++, M, K,
-                                             src0->data, wgt_type);
+      bool preloaded =
+          preload_weights_alloc(weight_size, layer, M, K, src0->data, wgt_type);
+#ifdef SECDA_LOG
+      const int64_t N = src1->ne[1];
+      plans_file << secda_plan.plan_counter << "," << layer << "," << M << ","
+                 << K << "," << N << "," << wgt_type << "," << weight_size
+                 << "," << (preloaded ? 1 : 0) << std::endl;
+#endif
       if (preloaded) secda_plan.preloaded_nodes++;
       secda_plan.supported_nodes++;
+      layer++;
     }
   }
+#ifdef SECDA_LOG
+  plans_file.close();
+#endif
   updatePlan_T(secda_plan.supported_nodes);
 
-  std::cout << "SECDA Supported nodes: " << secda_plan.supported_nodes
-            << " Preloaded nodes: " << secda_plan.preloaded_nodes << std::endl;
-  std::cout
+  SECDA_COUT << "SECDA Supported nodes: " << secda_plan.supported_nodes
+             << " Preloaded nodes: " << secda_plan.preloaded_nodes << std::endl;
+  SECDA_COUT
       << "================================================================"
       << std::endl;
   secda_plan.planned = true;
+  secda_plan.plan_counter++;
   return &secda_plan;
+}
+
+static void secda_graph_compute_perf_stats_node(struct ggml_tensor *node,
+                                                int s_cycles,
+                                                int64_t s_time_us) {
+  int64_t cycles_cur = ggml_cycles() - s_cycles;
+  int64_t time_us_cur = ggml_time_us() - s_time_us;
+
+  node->perf_runs++;
+  node->perf_cycles += cycles_cur;
+  node->perf_time_us += time_us_cur;
+  node->isSECDA = 1;
 }
 
 static enum ggml_status ggml_secda_graph_compute(ggml_backend_t backend,
@@ -94,6 +172,8 @@ static enum ggml_status ggml_secda_graph_compute(ggml_backend_t backend,
 
   for (int i = 0; i < cgraph->n_nodes; i++) {
     struct ggml_tensor *node = cgraph->nodes[i];
+    int64_t perf_node_start_cycles = ggml_cycles();
+    int64_t perf_node_start_time_us = ggml_time_us();
 
     switch (node->op) {
     case GGML_OP_MUL_MAT: ggml_secda_mul_mat(ctx, node); break;
@@ -109,6 +189,8 @@ static enum ggml_status ggml_secda_graph_compute(ggml_backend_t backend,
     default:
       GGML_ABORT("%s: unsupported op %s\n", __func__, ggml_op_desc(node));
     }
+    secda_graph_compute_perf_stats_node(node, perf_node_start_cycles,
+                                        perf_node_start_time_us);
   }
 
   return GGML_STATUS_SUCCESS;
@@ -260,23 +342,23 @@ ggml_backend_secda_device_supports_op(ggml_backend_dev_t dev,
     bool supp_q6 = false;
 
 #ifdef GGML_SECDA_QK2
-    // std::cout << "Support Q2" << std::endl;
+    // SECDA_COUT << "Support Q2" << std::endl;
     supp_q2 = true;
 #endif
 #ifdef GGML_SECDA_QK3
-    // std::cout << "Support Q3" << std::endl;
+    // SECDA_COUT << "Support Q3" << std::endl;
     supp_q3 = true;
 #endif
 #ifdef GGML_SECDA_QK4
-    // std::cout << "Support Q4" << std::endl;
+    // SECDA_COUT << "Support Q4" << std::endl;
     supp_q4 = true;
 #endif
 #ifdef GGML_SECDA_QK5
-    // std::cout << "Support Q5" << std::endl;
+    // SECDA_COUT << "Support Q5" << std::endl;
     supp_q5 = true;
 #endif
 #ifdef GGML_SECDA_QK6
-    // std::cout << "Support Q6" << std::endl;
+    // SECDA_COUT << "Support Q6" << std::endl;
     supp_q6 = true;
 #endif
 
@@ -292,6 +374,7 @@ ggml_backend_secda_device_supports_op(ggml_backend_dev_t dev,
 
     bool s1_type = src1->type == GGML_TYPE_F32;
     bool is_supported = s0_con && s1_con && s1_type && s0_type;
+    if (!is_supported) return false;
 
     // Dimension checks
     // int K = src1->ne[0];
@@ -304,10 +387,12 @@ ggml_backend_secda_device_supports_op(ggml_backend_dev_t dev,
 
     bool dim_ok = dim_check(M, N, K);
     // if (!dim_ok) {
-    //   std::cout << "SECDA: Dimension check failed for M=" << M << ", N=" << N
+    //   SECDA_COUT << "SECDA: Dimension check failed for M=" << M << ", N=" <<
+    //   N
     //             << ", K=" << K << std::endl;
     // } else {
-    //   std::cout << "SECDA: Dimension check passed for M=" << M << ", N=" << N
+    //   SECDA_COUT << "SECDA: Dimension check passed for M=" << M << ", N=" <<
+    //   N
     //             << ", K=" << K << std::endl;
     // }
     is_supported = is_supported && dim_ok;

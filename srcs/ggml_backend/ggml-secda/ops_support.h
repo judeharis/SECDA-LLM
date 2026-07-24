@@ -10,9 +10,19 @@
 // #define GGML_COMMON_DECL_C
 #include "ggml-quants.h"
 
+// #define SECDA_LOG
+#ifdef SECDA_BACKEND_PRINT
+#define SECDA_COUT std::cout
+#else
+#define SECDA_COUT                                                             \
+  if (false) std::cout
+#endif
+
 bool dim_check(int M, int N, int K);
 
 void initSECDA_ACC();
+
+void resetPlan_T();
 
 void updatePlan_T(int supported_nodes);
 

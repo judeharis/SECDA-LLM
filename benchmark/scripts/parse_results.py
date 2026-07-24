@@ -5,6 +5,8 @@ import re
 import pandas as pd
 from pathlib import Path
 
+
+sys.dont_write_bytecode = True
 # get_all files from a directory and process them
 
 # --- DMA parsing helpers (inlined so parse_results does not depend on dma_profiles.csv) ---
@@ -119,211 +121,351 @@ def parse_dma_from_file(path):
 
 # --- end DMA helpers ---
 
+RESULT_SUFFIXES = (
+    "_llama_perf.csv",
+    "_prf.csv",
+    "_bench_power.txt",
+    "_power.txt",
+    "_llama-bench.csv",
+    "_vtbo.csv",
+    "_tbo.csv",
+    "_results.txt",
+    ".txt",
+    ".csv",
+)
 
-def get_all_files(directory):
-    files = []
-    # get csv files
-    for file in os.listdir(directory):
-        if file.endswith(".csv"):
-            # skip aggregated or helper CSVs
-            if "results" in file:
-                continue
-            if file.startswith('dma_profiles'):
-                continue
-            # remove "_llama_perf.csv" from file name
-            file = re.sub("_llama_perf.csv", "", file)
-            # remove "_prf.csv" from file name
-            file = re.sub("_prf.csv", "", file)
-            # append if not already in list
-            if file not in files:
-                files.append(file)
-    return files
+TOOL_ORDER = ("bench", "cli", "synth")
+LLAMA_DMA_METRICS = [
+    "data_transfered_bytes",
+    "data_transfered_recv_bytes",
+    "data_per_send_bytes",
+    "data_per_recv_bytes",
+    "data_send_count_int",
+    "data_recv_count_int",
+    "send_speed_mb_s",
+    "recv_speed_mb_s",
+    "send_wait_int",
+    "recv_wait_int",
+    "summary_layer_total_int",
+]
+MEAN_DMA_METRICS = {"send_speed_mb_s", "recv_speed_mb_s", "send_wait_int", "recv_wait_int"}
 
 
-def process_file(file, run, df):
-    # add first row to data frame open file name  + _llama_perf.csv
-    df1 = pd.read_csv(file + "_llama_perf.csv")
-    # remove leading space from column names
-    df1.columns = df1.columns.str.lstrip()
-    # keep original run string for filename matching, then split into parts
-    run_str = run
-    # from run  name split with _
-    run = run.split("_")
-    opt = run[-1]
-    version = run[-2]
-    board = run[-3]
-    hw = run[-4]
-    threads = run[-5]
-    model = run[:-5]
-    model = "_".join(model)
-    run_tag = model + "_" + threads + "_" + hw + "_" + board + "_" + version + "_" + opt
-    # add run tag to data frame
-    df1["runtag"] = run_tag
-    df1["model"] = model
-    df1["threads"] = threads
-    df1["board"] = board
-    df1["version"] = version
-    df1["opt"] = opt
-    df1["hw"] = hw
-    # find total time by adding "prompt eval time" and "eval time"
+def read_csv_frame(path):
+    frame = pd.read_csv(path)
+    frame.columns = [str(column).strip().strip('"') for column in frame.columns]
+    frame = frame.loc[:, ~pd.Index(frame.columns).str.match(r"^Unnamed")]
+    return frame
 
-    # process power file
-    # the file is in format where you can ignore the first row and then every row as a single value, read until empty row
-    power = pd.read_csv(file + "_power.txt", header=None)
-    power = power.dropna()
-    power = power.iloc[1:]  # drop the first row
-    power = power[0].astype(float)
-    avg_power = power.mean()
-    df1["avg_power"] = avg_power
 
-    # --- DMA metrics: look for dma_profiles.csv in the same directory and aggregate metrics for this run ---
-    # parse DMA directly from matching .txt files in the same directory as the perf files
+def first_existing_path(directory, candidates):
+    for candidate in candidates:
+        candidate_path = os.path.join(directory, candidate)
+        if os.path.exists(candidate_path):
+            return candidate_path
+    return None
+
+
+def strip_known_suffix(filename):
+    for suffix in RESULT_SUFFIXES:
+        if filename.endswith(suffix):
+            return filename[: -len(suffix)]
+    return None
+
+
+def collect_run_groups(directory):
+    groups = {}
+    for filename in sorted(os.listdir(directory)):
+        if filename == "results.csv" or filename.endswith("_results.csv"):
+            continue
+        root = strip_known_suffix(filename)
+        if not root:
+            continue
+        tool = root.split("_", 1)[0]
+        if tool not in TOOL_ORDER:
+            continue
+        groups.setdefault(tool, {}).setdefault(root, []).append(filename)
+    return groups
+
+
+def numeric_scalar(value, default=0.0):
     try:
-        dirpath = os.path.dirname(file)
-        # collect parsed DMA rows from files whose basename starts with run
-        parsed_rows = []
-        for fname in os.listdir(dirpath):
-            if not fname.endswith('.txt'):
-                continue
-            # match files that start with the run tag (use original run string)
-            if not fname.startswith(run_str):
-                continue
-            fullp = os.path.join(dirpath, fname)
-            parsed_rows.extend(parse_dma_from_file(fullp))
-
-        if parsed_rows:
-            dma_sel = pd.DataFrame(parsed_rows)
-
-            def col_sum(df, name):
-                if name in df.columns:
-                    return pd.to_numeric(df[name], errors='coerce').fillna(0).sum()
-                return 0
-
-            def col_mean(df, name):
-                if name in df.columns:
-                    return pd.to_numeric(df[name], errors='coerce').dropna().mean()
-                return 0
-
-            # For each DMA id (assume up to 4: 0..3) compute metrics per-dma and attach as separate columns
-            per_dma_metrics = {}
-            dma_ids = [str(x) for x in range(4)]
-            metric_names = [
-                'data_transfered_bytes',
-                'data_transfered_recv_bytes',
-                'data_per_send_bytes',
-                'data_per_recv_bytes',
-                'data_send_count_int',
-                'data_recv_count_int',
-                'send_speed_mb_s',
-                'recv_speed_mb_s',
-                'send_wait_int',
-                'recv_wait_int',
-                'summary_layer_total_int',
-            ]
-            for did in dma_ids:
-                df_d = dma_sel[dma_sel.get('dma_id', '') == did]
-                for m in metric_names:
-                    key = f'dma{did}_{m}'
-                    if m in ['send_speed_mb_s', 'recv_speed_mb_s', 'send_wait_int', 'recv_wait_int']:
-                        # mean-type metrics
-                        per_dma_metrics[key] = col_mean(df_d, m) if not df_d.empty else 0
-                    else:
-                        per_dma_metrics[key] = col_sum(df_d, m) if not df_d.empty else 0
-
-            # aggregated totals are intentionally omitted; per-DMA metrics (dma0_.. dma3_..) are provided below
-        else:
-            dma_data_sent = dma_data_recv = dma_send_count = dma_recv_count = 0
-            dma_send_speed = dma_recv_speed = dma_send_wait = dma_recv_wait = dma_layer_total = 0
+        if pd.isna(value):
+            return default
     except Exception:
-        dma_data_sent = dma_data_recv = dma_send_count = dma_recv_count = 0
-        dma_send_speed = dma_recv_speed = dma_send_wait = dma_recv_wait = dma_layer_total = 0
-
-    # per-DMA columns (dma0_..., dma1_..., dma2_..., dma3_...) will be attached below
-
-    # attach per-DMA columns (dma0_..., dma1_..., dma2_..., dma3_...)
+        pass
     try:
-        for k, v in per_dma_metrics.items():
-            df1[k] = v
-    except NameError:
-        # per_dma_metrics may not exist if parsed_rows was empty; ensure zeros
-        for did in range(4):
-            for m in ['data_transfered_bytes','data_transfered_recv_bytes','data_per_send_bytes','data_per_recv_bytes','data_send_count_int','data_recv_count_int','send_speed_mb_s','recv_speed_mb_s','send_wait_int','recv_wait_int','summary_layer_total_int']:
-                df1[f'dma{did}_{m}'] = 0
+        return float(value)
+    except Exception:
+        return default
 
-    # print avg power
-    # print("Avg power for ", run_tag, " is ", avg_power)
 
-    # add to first row to data frame open file name + _prf.csv
-    if hw != "CPU":
-        df2 = pd.read_csv(file + "_prf.csv")
-        df2["runtag"] = run_tag
-        df1["mm layers"] = df2["layer_total"]
-        # remove layer_total from df2
-        df2 = df2.drop(columns=["layer_total"])
+def numeric_series(frame, column, default=0.0):
+    if column in frame.columns:
+        return pd.to_numeric(frame[column], errors="coerce").fillna(default)
+    return pd.Series([default] * len(frame), index=frame.index, dtype="float64")
 
-        df3 = pd.merge(df1, df2, on="runtag")
-        # add to main data frame
-        df = pd.concat([df, df3])
-    else:
-        df = pd.concat([df, df1])
 
-    df["token/s"] = (df["eval tokens"] + df["promt tokens"]) / (
-        (df["eval time"] + df["prompt eval time"]) / 1000
+def to_bool_scalar(value):
+    try:
+        if pd.isna(value):
+            return False
+    except Exception:
+        pass
+
+    text = str(value).strip().lower()
+    if text in {"true", "1", "yes", "y", "pass", "passed"}:
+        return True
+    if text in {"false", "0", "0.0", "no", "n", "fail", "failed", "", "none", "nan"}:
+        return False
+
+    try:
+        return float(text) != 0.0
+    except Exception:
+        return False
+
+
+def parse_llama_metadata(root):
+    tool, _, tail = root.partition("_")
+    metadata = {
+        "tool": tool,
+        "run_name": root,
+        "run_group": tail,
+        "model": tail,
+        "threads": "",
+        "board": "",
+        "version": "",
+        "opt": "",
+        "hw": "",
+    }
+
+    parts = tail.split("_") if tail else []
+    if len(parts) >= 5:
+        metadata["opt"] = parts[-1]
+        metadata["version"] = parts[-2]
+        metadata["board"] = parts[-3]
+        metadata["hw"] = parts[-4]
+        metadata["threads"] = parts[-5]
+        metadata["model"] = "_".join(parts[:-5])
+
+    return metadata
+
+
+def parse_synth_shape(root):
+    # Expected pattern: synth_Q2_128M_4N_256K_<hardware>
+    match = re.match(r"^synth_(Q\d+)_([0-9]+)M_([0-9]+)N_([0-9]+)K(?:_(.+))?$", root)
+    if not match:
+        return {
+            "q_type": "",
+            "m": 0,
+            "n": 0,
+            "k": 0,
+            "hardware": "",
+        }
+
+    return {
+        "q_type": match.group(1),
+        "m": int(match.group(2)),
+        "n": int(match.group(3)),
+        "k": int(match.group(4)),
+        # Keep the full hardware tag exactly as encoded in run_name.
+        "hardware": (match.group(5) or ""),
+    }
+
+
+def read_avg_power(directory, root):
+    power_path = first_existing_path(
+        directory,
+        [
+            f"{root}_power.txt",
+            f"{root}_bench_power.txt",
+        ],
     )
-    df["actual_total_time"] = df["prompt eval time"] + df["eval time"]
-    df["mm layers"] = df["mm layers"] if "mm layers" in df.columns else 0
-    df["other_layers"] = df["actual_total_time"] - (df["mm layers"] / 1000)
-    df["mm_total"] = df["actual_total_time"] - df["other_layers"]
-    # df1["Joules"] = (df1["avg_power"]/1000000) * (df1["actual_total_time"] / 1000 )
-    # df["avg_power"] = df["avg_power"] if "avg_power" in df.columns else 0
-    df["Joules"] = (df["avg_power"] / 1000000) * (df["actual_total_time"] / 1000)
+    if not power_path:
+        return 0.0
 
-    return df
-
-
-# main function
-def main():
-    # dir is an arg
-    dir = sys.argv[1]
-    print(dir)
-
-    files = get_all_files(dir)
-
-    print(files)
-    df = pd.DataFrame()
-    for file in files:
-        # ensure proper path join (dir may not end with slash)
-        filepath = os.path.join(dir, file)
-        df = process_file(filepath, file, df)
-
-    # sort df by model then hw the opt
-    df = df.rename(columns={"total_time": "e2e_time"})
-    df = df.rename(columns={"actual_total_time": "total_time (ms)"})
-    df = df.rename(columns={"hw": "Hardware"})
-    df = df.rename(columns={"model": "Model"})
-    df["Total Time (s)"] = df["total_time (ms)"] / 1000
-    df["Matmul Time (s)"] = df["mm_total"] / 1000
+    try:
+        power = pd.read_csv(power_path, header=None)
+        power = power.dropna()
+        if power.empty or len(power.index) <= 1:
+            return 0.0
+        values = pd.to_numeric(power.iloc[1:, 0], errors="coerce").dropna()
+        if values.empty:
+            return 0.0
+        return float(values.mean())
+    except Exception:
+        return 0.0
 
 
+def parse_dma_metrics(directory, root):
+    parsed_rows = []
+    for filename in os.listdir(directory):
+        if not filename.startswith(root):
+            continue
+        if not filename.endswith(".txt"):
+            continue
+        if filename.endswith("_power.txt") or filename.endswith("_bench_power.txt"):
+            continue
+        parsed_rows.extend(parse_dma_from_file(os.path.join(directory, filename)))
 
-    df = df.sort_values(by=["Model", "Hardware", "opt"])
-    # move model to first column, then threads, then board, then version, then opt, then hw
-    cols = list(df.columns)
-    cols.remove("Hardware")
-    cols.remove("Total Time (s)")
-    cols.remove("Matmul Time (s)")
-    cols.remove("opt")
-    cols.remove("version")
-    cols.remove("board")
-    cols.remove("threads")
-    cols.remove("Model")
-    cols.remove("total_time (ms)")
-    cols.remove("mm_total")
-    cols.remove("other_layers")
-    cols.remove("avg_power")
-    cols.remove("Joules")
-    cols.remove("token/s")
-    cols = [
+    dma_columns = {}
+    if not parsed_rows:
+        for did in range(4):
+            for metric in LLAMA_DMA_METRICS:
+                dma_columns[f"dma{did}_{metric}"] = 0
+        return dma_columns
+
+    dma_sel = pd.DataFrame(parsed_rows)
+    if "dma_id" in dma_sel.columns:
+        dma_sel["dma_id"] = dma_sel["dma_id"].astype(str)
+    else:
+        dma_sel["dma_id"] = ""
+
+    for did in range(4):
+        df_d = dma_sel[dma_sel["dma_id"] == str(did)]
+        for metric in LLAMA_DMA_METRICS:
+            key = f"dma{did}_{metric}"
+            if df_d.empty or metric not in df_d.columns:
+                dma_columns[key] = 0
+                continue
+            values = pd.to_numeric(df_d[metric], errors="coerce")
+            if metric in MEAN_DMA_METRICS:
+                dma_columns[key] = float(values.dropna().mean()) if not values.dropna().empty else 0
+            else:
+                dma_columns[key] = float(values.fillna(0).sum())
+
+    return dma_columns
+
+
+def parse_llama_group(directory, root):
+    perf_path = first_existing_path(
+        directory,
+        [
+            f"{root}_llama_perf.csv",
+            f"{root}_llama-bench.csv",
+        ],
+    )
+    if not perf_path:
+        return None
+
+    perf = read_csv_frame(perf_path)
+    if perf.empty:
+        return None
+
+    row = perf.iloc[0].to_dict()
+    row.update(parse_llama_metadata(root))
+    row["source_perf_file"] = os.path.basename(perf_path)
+    row["avg_power"] = read_avg_power(directory, root)
+    row["mm layers"] = 0
+
+    ## Disabling mm layers for now until we get a more reliable way to compute it from the graph stats. 
+    # prf_path = first_existing_path(directory, [f"{root}_prf.csv"])
+    # if prf_path:
+    #     prf = read_csv_frame(prf_path)
+    #     if not prf.empty:
+    #         if "layer_total" in prf.columns:
+    #             row["mm layers"] = numeric_scalar(prf.iloc[0]["layer_total"], 0)
+    #         for column in prf.columns:
+    #             if column == "layer_total":
+    #                 continue
+    #             row[f"prf_{column}"] = prf.iloc[0][column]
+
+    row.update(parse_dma_metrics(directory, root))
+    frame = pd.DataFrame([row])
+    frame["token/s"] = (
+        numeric_series(frame, "eval tokens") + numeric_series(frame, "prompt tokens")
+    ) / ((numeric_series(frame, "eval time") + numeric_series(frame, "prompt eval time")) / 1000)
+    frame["actual_total_time"] = numeric_series(frame, "prompt eval time") + numeric_series(frame, "eval time")
+    frame["mm layers"] = numeric_series(frame, "mm layers")
+    frame["other_layers"] = frame["actual_total_time"] - (frame["mm layers"] / 1000)
+    frame["mm_total"] = frame["actual_total_time"] - frame["other_layers"]
+    frame["Joules"] = (numeric_series(frame, "avg_power") / 1000000) * (frame["actual_total_time"] / 1000)
+    frame = frame.rename(columns={"hw": "Hardware", "model": "Model", "total time": "e2e_time", "total_time": "e2e_time"})
+    frame["Total Time (s)"] = frame["actual_total_time"] / 1000
+    frame["Matmul Time (s)"] = frame["mm_total"] / 1000
+    return frame
+
+
+def parse_synth_group(directory, root):
+    tbo_path = first_existing_path(directory, [f"{root}_tbo.csv"])
+    if not tbo_path:
+        return None
+
+    tbo = read_csv_frame(tbo_path)
+    if tbo.empty:
+        return None
+
+    tbo["tool"] = "synth"
+    tbo["run_name"] = root
+    shape = parse_synth_shape(root)
+    tbo["q_type"] = shape["q_type"]
+    tbo["m"] = shape["m"]
+    tbo["n"] = shape["n"]
+    tbo["k"] = shape["k"]
+    tbo["hardware"] = shape["hardware"]
+    tbo["source_tbo_file"] = os.path.basename(tbo_path)
+    tbo["avg_power"] = read_avg_power(directory, root)
+    if "time_us" in tbo.columns:
+        time_us = pd.to_numeric(tbo["time_us"], errors="coerce")
+        n_runs = pd.to_numeric(tbo.get("n_runs", 1), errors="coerce").replace(0, pd.NA)
+        tbo["latency_ns"] = (time_us / n_runs).fillna(0) * 1000
+        tbo["total_time (ms)"] = time_us / 1000
+        avg_power_uw = pd.to_numeric(tbo["avg_power"], errors="coerce").fillna(0)
+        tbo["micro_joules_per_run"] = avg_power_uw * (tbo["latency_ns"] / 1000000000)
+    else:
+        tbo["latency_ns"] = 0
+        tbo["total_time (ms)"] = 0
+        tbo["micro_joules_per_run"] = 0
+    tbo["valid"] = False
+
+    vtbo_path = first_existing_path(directory, [f"{root}_vtbo.csv"])
+    if vtbo_path:
+        vtbo = read_csv_frame(vtbo_path)
+        if not vtbo.empty and "passed" in vtbo.columns:
+            valid = vtbo["passed"].reset_index(drop=True).apply(to_bool_scalar)
+            if len(valid) == len(tbo.index):
+                tbo["valid"] = valid.values
+            elif len(valid) > 0:
+                tbo["valid"] = bool(valid.iloc[0])
+
+    if "error" in tbo.columns:
+        error_text = tbo["error"].astype(str).str.strip()
+        tbo["error"] = error_text.mask(
+            error_text.str.lower().isin({"", "0", "0.0", "none", "nan"}),
+            "n/a",
+        )
+    else:
+        tbo["error"] = "n/a"
+
+    prf_path = first_existing_path(directory, [f"{root}_prf.csv"])
+    if prf_path:
+        prf = read_csv_frame(prf_path)
+        if not prf.empty:
+            for column in prf.columns:
+                value = prf.iloc[0][column]
+                if column in tbo.columns:
+                    tbo[f"prf_{column}"] = value
+                else:
+                    tbo[column] = value
+
+    dma_metrics = parse_dma_metrics(directory, root)
+    for key, value in dma_metrics.items():
+        tbo[key] = value
+    return tbo
+
+
+def sort_llama_frame(frame):
+    if frame.empty:
+        return frame
+
+    sort_columns = [column for column in ["Model", "Hardware", "opt"] if column in frame.columns]
+    if sort_columns:
+        frame = frame.sort_values(by=sort_columns)
+
+    ordered_columns = []
+    preferred = [
+        "tool",
+        "run_name",
         "Model",
         "Hardware",
         "Total Time (s)",
@@ -332,29 +474,119 @@ def main():
         "Joules",
         "other_layers",
         "total_time (ms)",
+        "actual_total_time",
         "mm_total",
         "avg_power",
         "threads",
         "board",
         "version",
         "opt",
-        
-    ] + cols
-    # ensure DMA columns (dma0_.. dma3_..) come last in the CSV
-    dma_cols = [c for c in df.columns if re.match(r'^dma[0-3]_', c)]
-    # remove any dma cols from the middle
-    cols = [c for c in cols if c not in dma_cols]
-    cols = cols + sorted(dma_cols)
-    df = df[cols]
+    ]
+    for column in preferred:
+        if column in frame.columns:
+            ordered_columns.append(column)
 
-    df = df.drop(columns=["mm layers"])
-    # file nan with 0
-    df = df.fillna(0)
-    print("Saving results to csv: ", f"{dir}/results.csv")
+    for column in frame.columns:
+        if column not in ordered_columns and not re.match(r"^dma[0-3]_", column):
+            ordered_columns.append(column)
 
-    # write to csv without index column
-    # Use fixed-point float format to avoid scientific notation in output
-    df.to_csv(f"{dir}/results.csv", index=False, float_format='%.6f')
+    dma_columns = sorted([column for column in frame.columns if re.match(r"^dma[0-3]_", column)])
+    ordered_columns.extend([column for column in dma_columns if column not in ordered_columns])
+
+    return frame[ordered_columns]
+
+
+def sort_synth_frame(frame):
+    if frame.empty:
+        return frame
+
+    if "run_name" in frame.columns:
+        frame = frame.sort_values(by=["run_name"])
+
+    ordered_columns = []
+    preferred = [
+        "tool",
+        "run_name",
+        "q_type",
+        "m",
+        "n",
+        "k",
+        "hardware",
+        "test_time",
+        "backend_name",
+        "op_name",
+        "test_mode",
+        "supported",
+        "passed",
+        "time_us",
+        "latency_ns",
+        "total_time (ms)",
+        "avg_power",
+        "micro_joules_per_run",
+        "layer_total",
+    ]
+    for column in preferred:
+        if column in frame.columns:
+            ordered_columns.append(column)
+
+    for column in frame.columns:
+        if column not in ordered_columns and not re.match(r"^dma[0-3]_", column):
+            ordered_columns.append(column)
+
+    dma_columns = sorted([column for column in frame.columns if re.match(r"^dma[0-3]_", column)])
+    ordered_columns.extend([column for column in dma_columns if column not in ordered_columns])
+
+    return frame[ordered_columns]
+
+
+def write_frame(directory, name, frame):
+    if frame is None or frame.empty:
+        return None
+
+    output_path = os.path.join(directory, name)
+    frame = frame.fillna(0)
+    frame.to_csv(output_path, index=False, float_format="%.6f")
+    print(f"Saving results to csv: {output_path}")
+    return output_path
+
+
+def main():
+    directory = sys.argv[1]
+    print(directory)
+
+    groups = collect_run_groups(directory)
+    print(groups)
+
+    tool_frames = {}
+    for tool in TOOL_ORDER:
+        tool_groups = groups.get(tool, {})
+        tool_rows = []
+        for root in sorted(tool_groups):
+            if tool in {"bench", "cli"}:
+                frame = parse_llama_group(directory, root)
+                if frame is not None:
+                    tool_rows.append(frame)
+            elif tool == "synth":
+                frame = parse_synth_group(directory, root)
+                if frame is not None:
+                    tool_rows.append(frame)
+
+        if not tool_rows:
+            continue
+
+        combined = pd.concat(tool_rows, ignore_index=True, sort=False)
+        if tool in {"bench", "cli"}:
+            combined = sort_llama_frame(combined)
+        else:
+            combined = sort_synth_frame(combined)
+        tool_frames[tool] = combined
+        write_frame(directory, f"{tool}_results.csv", combined)
+
+    if tool_frames:
+        combined_all = pd.concat(tool_frames.values(), ignore_index=True, sort=False)
+        if "tool" in combined_all.columns:
+            combined_all = combined_all.sort_values(by=["tool"] + (["run_name"] if "run_name" in combined_all.columns else []))
+        write_frame(directory, "results.csv", combined_all)
 
 
 if __name__ == "__main__":
