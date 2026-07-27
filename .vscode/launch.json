@@ -173,8 +173,10 @@
                 "perf",
                 "-b",
                 "CPU",
-                "--test-file",
-                "${workspaceFolder}/tests/backend_tests/mul_mat_suite_generated.txt",
+                "-t",
+                "1",
+                "--test-params",
+                "29 0 128 4 1 1 16 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 2 10 256 128 1 1 0 0 0 0 0 256 4 1 1 0 0 0 0 Q2_128M_4N_256K"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/llama.cpp",

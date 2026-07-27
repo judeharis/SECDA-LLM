@@ -2,6 +2,7 @@
 set -eo pipefail
 
 enable_power=false
+threads=(1)
 
 BOARD_PATH="/home/ubuntu/Workspace/secda_llm"
 BOARD_SUB="benchmark"
@@ -29,6 +30,10 @@ parse_args() {
       --power)
         enable_power=true
         shift
+        ;;
+      -t | --threads)
+        IFS=',' read -r -a threads <<< "$2"
+        shift 2
         ;;
       *)
         echo "Unknown option: $1"
@@ -142,10 +147,14 @@ start_power_logger() {
 
   active_power_pid=""
   active_power_pid_file=""
-  if [[ "${enable_power}" == true && -x "${POWER_START_SCRIPT}" && -x "${POWER_STOP_SCRIPT}" ]]; then
-    "${POWER_START_SCRIPT}" 0.05 "${power_log_file}" "${power_pid_file}"
-    active_power_pid=$(cat "${power_pid_file}" 2>/dev/null || true)
-    active_power_pid_file="${power_pid_file}"
+  if [[ "${enable_power}" == true ]]; then
+    if [[ -x "${POWER_START_SCRIPT}" && -x "${POWER_STOP_SCRIPT}" ]]; then
+      "${POWER_START_SCRIPT}" 0.05 "${power_log_file}" "${power_pid_file}"
+      active_power_pid=$(cat "${power_pid_file}" 2>/dev/null || true)
+      active_power_pid_file="${power_pid_file}"
+    else
+      echo "Power logger scripts not found/executable. Skipping power logging."
+    fi
   fi
 }
 
@@ -155,11 +164,12 @@ run_single_test() {
   local tag="$3"
   local test_name="$4"
   local test_line="$5"
+  local thread="$6"
 
-  local result_file="../results/synth_${test_name}_${tag}_results.txt"
-  local valid_file="../results/synth_${test_name}_${tag}_validation.txt"
-  local power_log_file="../results/synth_${test_name}_${tag}_power.txt"
-  local power_pid_file="../results/synth_${test_name}_${tag}_power.pid"
+  local result_file="../results/synth_${test_name}_${thread}_${tag}_results.txt"
+  local valid_file="../results/synth_${test_name}_${thread}_${tag}_validation.txt"
+  local power_log_file="../results/synth_${test_name}_${thread}_${tag}_power.txt"
+  local power_pid_file="../results/synth_${test_name}_${thread}_${tag}_power.pid"
   local backend="SECDA"
   local cmd_status=0
 
@@ -169,24 +179,24 @@ run_single_test() {
 
 
   echo "" | tee -a "${result_file}"
-  echo "========== Test: ${test_name} ==========" | tee -a "${result_file}"
+  echo "========== Test: ${test_name} (threads=${thread}) ==========" | tee -a "${result_file}"
 
-  LD_LIBRARY_PATH="${PWD}/bin:${LD_LIBRARY_PATH:-}" "./${test_binary}" test -b "${backend}" --output csv --test-params "${test_line}" \
+  LD_LIBRARY_PATH="${PWD}/bin:${LD_LIBRARY_PATH:-}" "./${test_binary}" test -b "${backend}" -t "${thread}" --output csv --test-params "${test_line}" \
     >> "${valid_file}" 2>&1 || cmd_status=$?
   check_cmd_status "${cmd_status}" "${test_name}" "tbo_validation"
 
-  move_if_exists "tbo.csv" "../results/synth_${test_name}_${tag}_vtbo.csv"
+  move_if_exists "tbo.csv" "../results/synth_${test_name}_${thread}_${tag}_vtbo.csv"
 
   cmd_status=0
   start_power_logger "${power_log_file}" "${power_pid_file}"
-  LD_LIBRARY_PATH="${PWD}/bin:${LD_LIBRARY_PATH:-}" "./${test_binary}" perf -b "${backend}" --output csv --test-params "${test_line}" \
+  LD_LIBRARY_PATH="${PWD}/bin:${LD_LIBRARY_PATH:-}" "./${test_binary}" perf -b "${backend}" -t "${thread}" --output csv --test-params "${test_line}" \
     2>&1 | tee -a "${result_file}" || cmd_status=$?
 
   stop_active_power_logger
   check_cmd_status "${cmd_status}" "${test_name}" "${test_binary}"
 
-  [[ "${acc}" == true ]] && move_if_exists "prf.csv" "../results/synth_${test_name}_${tag}_prf.csv"
-  move_if_exists "tbo.csv" "../results/synth_${test_name}_${tag}_tbo.csv"
+  [[ "${acc}" == true ]] && move_if_exists "prf.csv" "../results/synth_${test_name}_${thread}_${tag}_prf.csv"
+  move_if_exists "tbo.csv" "../results/synth_${test_name}_${thread}_${tag}_tbo.csv"
   drop_caches 1
 }
 
@@ -214,8 +224,10 @@ run_binary_suite() {
     exit 1
   fi
 
-  for i in "${!synth_test_names[@]}"; do
-    run_single_test "${test_binary}" "${acc}" "${tag}" "${synth_test_names[$i]}" "${synth_test_lines[$i]}"
+  for thread in "${threads[@]}"; do
+    for i in "${!synth_test_names[@]}"; do
+      run_single_test "${test_binary}" "${acc}" "${tag}" "${synth_test_names[$i]}" "${synth_test_lines[$i]}" "${thread}"
+    done
   done
 
   echo "========================================"

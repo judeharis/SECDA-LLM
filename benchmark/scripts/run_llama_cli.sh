@@ -2,6 +2,7 @@
 set -eo pipefail
 
 enable_power=false
+threads=(1)
 
 BOARD_PATH="/home/ubuntu/Workspace/secda_llm"
 BOARD_SUB="benchmark"
@@ -42,6 +43,10 @@ parse_args() {
         enable_power=true
         shift
         ;;
+      -t | --threads)
+        IFS=',' read -r -a threads <<< "$2"
+        shift 2
+        ;;
       *)
         echo "Unknown option: $1"
         exit 1
@@ -60,7 +65,6 @@ load_configs() {
   acc_tag=("${acc_tags_array[@]}")
   bins=("${bins_array[@]}")
   accelerated=("${accelerated_array[@]}")
-  threads=(1)
 }
 
 init_commands_log() {

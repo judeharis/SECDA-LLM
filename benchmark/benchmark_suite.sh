@@ -62,6 +62,9 @@ Options:
   -l, --llama-bench   Run llama-bench
   -s, --synth-bench   Run synth benchmark (test-backend-ops)
   -p, --parse         Parse and fetch results
+  -po, --power        Enable power logging during benchmark runs (default: on)
+  --no-power          Disable power logging during benchmark runs
+  -t, --threads N     Thread count(s) to run with, comma-separated (default: 1)
   -h, --help          Show this help
 
 Defaults (if no flags specified): compile, llama-bench, parse
@@ -193,7 +196,8 @@ EOF
 
 main() {
   local total_start=$SECONDS
-  local do_compile=0 do_cli=0 do_llama_bench=0 do_synth_bench=0 do_parse=0 mode_selected=0
+  local do_compile=0 do_cli=0 do_llama_bench=0 do_synth_bench=0 do_parse=0 do_power=1 mode_selected=0
+  local threads_value=""
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -226,6 +230,18 @@ main() {
         mode_selected=1
         shift
         ;;
+      -po | --power)
+        do_power=1
+        shift
+        ;;
+      --no-power)
+        do_power=0
+        shift
+        ;;
+      -t | --threads)
+        threads_value="$2"
+        shift 2
+        ;;
       -h | --help)
         usage
         exit 0
@@ -251,6 +267,12 @@ main() {
     exit 1
   fi
 
+  local power_flag=""
+  [[ $do_power -eq 1 ]] && power_flag="--power"
+
+  local thread_flag=""
+  [[ -n "$threads_value" ]] && thread_flag="--threads ${threads_value}"
+
   print_config
 
   # Compile and send
@@ -268,7 +290,7 @@ main() {
   # Run llama-cli
   if [[ $do_cli -eq 1 ]]; then
     local step_start=$SECONDS
-    send_and_run_benchmark "llama-cli" --power
+    send_and_run_benchmark "llama-cli" ${power_flag} ${thread_flag}
     stage_times[run]=$((SECONDS - step_start))
   else
     log_stage "Skipping llama-cli"
@@ -277,7 +299,7 @@ main() {
   # Run llama-bench
   if [[ $do_llama_bench -eq 1 ]]; then
     local step_start=$SECONDS
-    send_and_run_benchmark "llama-bench" --power
+    send_and_run_benchmark "llama-bench" ${power_flag} ${thread_flag}
     stage_times[llama-bench]=$((SECONDS - step_start))
   else
     log_stage "Skipping llama-bench"
@@ -286,7 +308,7 @@ main() {
   # Run synth-bench
   if [[ $do_synth_bench -eq 1 ]]; then
     local step_start=$SECONDS
-    send_and_run_benchmark "synth-bench" --power
+    send_and_run_benchmark "synth-bench" ${power_flag} ${thread_flag}
     stage_times[synth-bench]=$((SECONDS - step_start))
   else
     log_stage "Skipping synth-bench"

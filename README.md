@@ -8,7 +8,6 @@ cd SECDA-LLM
 git submodule init
 git submodule update
 ./setup.sh
-
 ```
 
 ## CMake presets
