@@ -406,9 +406,9 @@ def parse_synth_group(directory, root):
     tbo["source_tbo_file"] = os.path.basename(tbo_path)
     tbo["avg_power"] = read_avg_power(directory, root)
     if "time_us" in tbo.columns:
+        # time_us is already the average time per run (total_time_us / total_runs), not a total to be divided by n_runs.
         time_us = pd.to_numeric(tbo["time_us"], errors="coerce")
-        n_runs = pd.to_numeric(tbo.get("n_runs", 1), errors="coerce").replace(0, pd.NA)
-        tbo["latency_ns"] = (time_us / n_runs).fillna(0) * 1000
+        tbo["latency_ns"] = time_us.fillna(0) * 1000
         tbo["total_time (ms)"] = time_us / 1000
         avg_power_uw = pd.to_numeric(tbo["avg_power"], errors="coerce").fillna(0)
         tbo["micro_joules_per_run"] = avg_power_uw * (tbo["latency_ns"] / 1000000000)
