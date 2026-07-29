@@ -1,0 +1,258 @@
+{
+    "q2v6.0A": {
+        "bitstreams": "BFP_Q2_v6",
+        "binaries": "llama_cli_v6A_secda_q2",
+        "acc_tag": "BFPP_KRIA_v6.0A_q2",
+        "bins": "bin_q2",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK2=ON -DSECDA_BFPP_ACC_V3=ON"
+    },
+    "q3v6.0A": {
+        "bitstreams": "BFP_Q3_v6",
+        "binaries": "llama_cli_v6A_secda_q3",
+        "acc_tag": "BFPP_KRIA_v6.0A_q3",
+        "bins": "bin_q3",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK3=ON -DSECDA_BFPP_ACC_V3=ON"
+    },
+    "q4v6.0A": {
+        "bitstreams": "BFP_Q4_v6",
+        "binaries": "llama_cli_v6A_secda_q4",
+        "acc_tag": "BFPP_KRIA_v6.0A_q4",
+        "bins": "bin_q4",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK4=ON -DSECDA_BFPP_ACC_V3=ON"
+    },
+    "q5v6.0A": {
+        "bitstreams": "BFP_Q5_v6",
+        "binaries": "llama_cli_v6A_secda_q5",
+        "acc_tag": "BFPP_KRIA_v6.0A_q5",
+        "bins": "bin_q5",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK5=ON -DSECDA_BFPP_ACC_V3=ON"
+    },
+    "q6v6.0A": {
+        "bitstreams": "BFP_Q6_v6",
+        "binaries": "llama_cli_v6A_secda_q6",
+        "acc_tag": "BFPP_KRIA_v6.0A_q6",
+        "bins": "bin_q6",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK6=ON -DSECDA_BFPP_ACC_V3=ON"
+    },
+    "q2q3v6.0A": {
+        "bitstreams": "BFP_Q2Q3_v6",
+        "binaries": "llama_cli_v6A_secda_q2q3",
+        "acc_tag": "BFPP_KRIA_v6.0A_q2q3",
+        "bins": "bin_q2q3",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK2=ON -DSECDA_QK3=ON -DSECDA_BFPP_ACC_V3=ON"
+    },
+    "q2q4v6.0A": {
+        "bitstreams": "BFP_Q2Q4_v6",
+        "binaries": "llama_cli_v6A_secda_q2q4",
+        "acc_tag": "BFPP_KRIA_v6.0A_q2q4",
+        "bins": "bin_q2q4",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK2=ON -DSECDA_QK4=ON -DSECDA_BFPP_ACC_V3=ON"
+    },
+    "q2q5v6.0A": {
+        "bitstreams": "BFP_Q2Q5_v6",
+        "binaries": "llama_cli_v6A_secda_q2q5",
+        "acc_tag": "BFPP_KRIA_v6.0A_q2q5",
+        "bins": "bin_q2q5",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK2=ON -DSECDA_QK5=ON -DSECDA_BFPP_ACC_V3=ON"
+    },
+    "q2q6v6.0A": {
+        "bitstreams": "BFP_Q2Q6_v6",
+        "binaries": "llama_cli_v6A_secda_q2q6",
+        "acc_tag": "BFPP_KRIA_v6.0A_q2q6",
+        "bins": "bin_q2q6",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK2=ON -DSECDA_QK6=ON -DSECDA_BFPP_ACC_V3=ON"
+    },
+    "q3q4v6.0A": {
+        "bitstreams": "BFP_Q3Q4_v6",
+        "binaries": "llama_cli_v6A_secda_q3q4",
+        "acc_tag": "BFPP_KRIA_v6.0A_q3q4",
+        "bins": "bin_q3q4",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK3=ON -DSECDA_QK4=ON -DSECDA_BFPP_ACC_V3=ON"
+    },
+    "q3q5v6.0A": {
+        "bitstreams": "BFP_Q3Q5_v6",
+        "binaries": "llama_cli_v6A_secda_q3q5",
+        "acc_tag": "BFPP_KRIA_v6.0A_q3q5",
+        "bins": "bin_q3q5",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK3=ON -DSECDA_QK5=ON -DSECDA_BFPP_ACC_V3=ON"
+    },
+    "q3q6v6.0A": {
+        "bitstreams": "BFP_Q3Q6_v6",
+        "binaries": "llama_cli_v6A_secda_q3q6",
+        "acc_tag": "BFPP_KRIA_v6.0A_q3q6",
+        "bins": "bin_q3q6",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK3=ON -DSECDA_QK6=ON -DSECDA_BFPP_ACC_V3=ON"
+    },
+    "q4q5v6.0A": {
+        "bitstreams": "BFP_Q4Q5_v6",
+        "binaries": "llama_cli_v6A_secda_q4q5",
+        "acc_tag": "BFPP_KRIA_v6.0A_q4q5",
+        "bins": "bin_q4q5",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK4=ON -DSECDA_QK5=ON -DSECDA_BFPP_ACC_V3=ON"
+    },
+    "q4q6v6.0A": {
+        "bitstreams": "BFP_Q4Q6_v6",
+        "binaries": "llama_cli_v6A_secda_q4q6",
+        "acc_tag": "BFPP_KRIA_v6.0A_q4q6",
+        "bins": "bin_q4q6",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK4=ON -DSECDA_QK6=ON -DSECDA_BFPP_ACC_V3=ON"
+    },
+    "q5q6v6.0A": {
+        "bitstreams": "BFP_Q5Q6_v6",
+        "binaries": "llama_cli_v6A_secda_q5q6",
+        "acc_tag": "BFPP_KRIA_v6.0A_q5q6",
+        "bins": "bin_q5q6",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK5=ON -DSECDA_QK6=ON -DSECDA_BFPP_ACC_V3=ON"
+    },
+    "q2q3q4v6.0A": {
+        "bitstreams": "BFP_Q2Q3Q4_v6",
+        "binaries": "llama_cli_v6A_secda_q2q3q4",
+        "acc_tag": "BFPP_KRIA_v6.0A_q2q3q4",
+        "bins": "bin_q2q3q4",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK2=ON -DSECDA_QK3=ON -DSECDA_QK4=ON -DSECDA_BFPP_ACC_V3=ON"
+    },
+    "q2q3q5v6.0A": {
+        "bitstreams": "BFP_Q2Q3Q5_v6",
+        "binaries": "llama_cli_v6A_secda_q2q3q5",
+        "acc_tag": "BFPP_KRIA_v6.0A_q2q3q5",
+        "bins": "bin_q2q3q5",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK2=ON -DSECDA_QK3=ON -DSECDA_QK5=ON -DSECDA_BFPP_ACC_V3=ON"
+    },
+    "q2q3q6v6.0A": {
+        "bitstreams": "BFP_Q2Q3Q6_v6",
+        "binaries": "llama_cli_v6A_secda_q2q3q6",
+        "acc_tag": "BFPP_KRIA_v6.0A_q2q3q6",
+        "bins": "bin_q2q3q6",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK2=ON -DSECDA_QK3=ON -DSECDA_QK6=ON -DSECDA_BFPP_ACC_V3=ON"
+    },
+    "q2q4q5v6.0A": {
+        "bitstreams": "BFP_Q2Q4Q5_v6",
+        "binaries": "llama_cli_v6A_secda_q2q4q5",
+        "acc_tag": "BFPP_KRIA_v6.0A_q2q4q5",
+        "bins": "bin_q2q4q5",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK2=ON -DSECDA_QK4=ON -DSECDA_QK5=ON -DSECDA_BFPP_ACC_V3=ON"
+    },
+    "q2q4q6v6.0A": {
+        "bitstreams": "BFP_Q2Q4Q6_v6",
+        "binaries": "llama_cli_v6A_secda_q2q4q6",
+        "acc_tag": "BFPP_KRIA_v6.0A_q2q4q6",
+        "bins": "bin_q2q4q6",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK2=ON -DSECDA_QK4=ON -DSECDA_QK6=ON -DSECDA_BFPP_ACC_V3=ON"
+    },
+    "q2q5q6v6.0A": {
+        "bitstreams": "BFP_Q2Q5Q6_v6",
+        "binaries": "llama_cli_v6A_secda_q2q5q6",
+        "acc_tag": "BFPP_KRIA_v6.0A_q2q5q6",
+        "bins": "bin_q2q5q6",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK2=ON -DSECDA_QK5=ON -DSECDA_QK6=ON -DSECDA_BFPP_ACC_V3=ON"
+    },
+    "q3q4q5v6.0A": {
+        "bitstreams": "BFP_Q3Q4Q5_v6",
+        "binaries": "llama_cli_v6A_secda_q3q4q5",
+        "acc_tag": "BFPP_KRIA_v6.0A_q3q4q5",
+        "bins": "bin_q3q4q5",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK3=ON -DSECDA_QK4=ON -DSECDA_QK5=ON -DSECDA_BFPP_ACC_V3=ON"
+    },
+    "q3q4q6v6.0A": {
+        "bitstreams": "BFP_Q3Q4Q6_v6",
+        "binaries": "llama_cli_v6A_secda_q3q4q6",
+        "acc_tag": "BFPP_KRIA_v6.0A_q3q4q6",
+        "bins": "bin_q3q4q6",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK3=ON -DSECDA_QK4=ON -DSECDA_QK6=ON -DSECDA_BFPP_ACC_V3=ON"
+    },
+    "q3q5q6v6.0A": {
+        "bitstreams": "BFP_Q3Q5Q6_v6",
+        "binaries": "llama_cli_v6A_secda_q3q5q6",
+        "acc_tag": "BFPP_KRIA_v6.0A_q3q5q6",
+        "bins": "bin_q3q5q6",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK3=ON -DSECDA_QK5=ON -DSECDA_QK6=ON -DSECDA_BFPP_ACC_V3=ON"
+    },
+    "q4q5q6v6.0A": {
+        "bitstreams": "BFP_Q4Q5Q6_v6",
+        "binaries": "llama_cli_v6A_secda_q4q5q6",
+        "acc_tag": "BFPP_KRIA_v6.0A_q4q5q6",
+        "bins": "bin_q4q5q6",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK4=ON -DSECDA_QK5=ON -DSECDA_QK6=ON -DSECDA_BFPP_ACC_V3=ON"
+    },
+    "q2q3q4q5v6.0A": {
+        "bitstreams": "BFP_Q2Q3Q4Q5_v6",
+        "binaries": "llama_cli_v6A_secda_q2q3q4q5",
+        "acc_tag": "BFPP_KRIA_v6.0A_q2q3q4q5",
+        "bins": "bin_q2q3q4q5",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK2=ON -DSECDA_QK3=ON -DSECDA_QK4=ON -DSECDA_QK5=ON -DSECDA_BFPP_ACC_V3=ON"
+    },
+    "q2q3q4q6v6.0A": {
+        "bitstreams": "BFP_Q2Q3Q4Q6_v6",
+        "binaries": "llama_cli_v6A_secda_q2q3q4q6",
+        "acc_tag": "BFPP_KRIA_v6.0A_q2q3q4q6",
+        "bins": "bin_q2q3q4q6",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK2=ON -DSECDA_QK3=ON -DSECDA_QK4=ON -DSECDA_QK6=ON -DSECDA_BFPP_ACC_V3=ON"
+    },
+    "q2q3q5q6v6.0A": {
+        "bitstreams": "BFP_Q2Q3Q5Q6_v6",
+        "binaries": "llama_cli_v6A_secda_q2q3q5q6",
+        "acc_tag": "BFPP_KRIA_v6.0A_q2q3q5q6",
+        "bins": "bin_q2q3q5q6",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK2=ON -DSECDA_QK3=ON -DSECDA_QK5=ON -DSECDA_QK6=ON -DSECDA_BFPP_ACC_V3=ON"
+    },
+    "q2q4q5q6v6.0A": {
+        "bitstreams": "BFP_Q2Q4Q5Q6_v6",
+        "binaries": "llama_cli_v6A_secda_q2q4q5q6",
+        "acc_tag": "BFPP_KRIA_v6.0A_q2q4q5q6",
+        "bins": "bin_q2q4q5q6",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK2=ON -DSECDA_QK4=ON -DSECDA_QK5=ON -DSECDA_QK6=ON -DSECDA_BFPP_ACC_V3=ON"
+    },
+    "q3q4q5q6v6.0A": {
+        "bitstreams": "BFP_Q3Q4Q5Q6_v6",
+        "binaries": "llama_cli_v6A_secda_q3q4q5q6",
+        "acc_tag": "BFPP_KRIA_v6.0A_q3q4q5q6",
+        "bins": "bin_q3q4q5q6",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK3=ON -DSECDA_QK4=ON -DSECDA_QK5=ON -DSECDA_QK6=ON -DSECDA_BFPP_ACC_V3=ON"
+    },
+    "q2q3q4q5q6v6.0A": {
+        "bitstreams": "BFP_Q2Q3Q4Q5Q6_v6",
+        "binaries": "llama_cli_v6A_secda_q2q3q4q5q6",
+        "acc_tag": "BFPP_KRIA_v6.0A_q2q3q4q5q6",
+        "bins": "bin_q2q3q4q5q6",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK2=ON -DSECDA_QK3=ON -DSECDA_QK4=ON -DSECDA_QK5=ON -DSECDA_QK6=ON -DSECDA_BFPP_ACC_V3=ON"
+    },
+    "q2q3q4q5q6v6.0B": {
+        "bitstreams": "BFP_Q2Q3Q4Q5Q6_v6",
+        "binaries": "llama_cli_v6B_secda_q2q3q4q5q6",
+        "acc_tag": "BFPP_KRIA_v6.0B_q2q3q4q5q6",
+        "bins": "binB_q2q3q4q5q6",
+        "accelerated": "true",
+        "bin_flags": "-DACC_PRELOAD=OFF -DSECDA_QK2=ON -DSECDA_QK3=ON -DSECDA_QK4=ON -DSECDA_QK5=ON -DSECDA_QK6=ON -DSECDA_BFPP_ACC_V3=ON"
+    }
+}

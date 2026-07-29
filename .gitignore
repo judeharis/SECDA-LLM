@@ -4,3 +4,4 @@ build/
 out/
 benchmark/results/
 _old/
+benchmark/configs/exp_configs_old/

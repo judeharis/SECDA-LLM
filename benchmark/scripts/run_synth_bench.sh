@@ -200,6 +200,34 @@ run_single_test() {
   drop_caches 1
 }
 
+extract_supported_qtypes() {
+  local bitstream_name="$1"
+  local matches
+
+  matches=$(echo "${bitstream_name}" | grep -oE 'Q[0-9]+' | tr '\n' ' ' | sed 's/[[:space:]]*$//') || true
+  echo "${matches}"
+}
+
+extract_test_qtype() {
+  local test_name="$1"
+  local test_line="$2"
+  local qtype
+
+  qtype=$(echo "${test_name}" | grep -oE 'Q[0-9]+' | head -n1) || true
+  if [[ -z "${qtype}" ]]; then
+    qtype=$(echo "${test_line}" | grep -oE 'Q[0-9]+' | head -n1) || true
+  fi
+  echo "${qtype}"
+}
+
+is_qtype_supported() {
+  local qtype="$1"
+  local supported_qtypes="$2"
+
+  [[ -z "${qtype}" ]] && return 0
+  [[ " ${supported_qtypes} " == *" ${qtype} "* ]]
+}
+
 run_binary_suite() {
   local binary="$1"
   local acc="$2"
@@ -208,6 +236,7 @@ run_binary_suite() {
   local bitstream="$5"
 
   local test_binary="${binary}_tbo"
+  local supported_qtypes=""
 
   echo "========================================"
   echo "Running synth bench for ${tag}"
@@ -224,8 +253,23 @@ run_binary_suite() {
     exit 1
   fi
 
+  if [[ "${acc}" == true ]]; then
+    supported_qtypes=$(extract_supported_qtypes "${bitstream}")
+    if [[ -n "${supported_qtypes}" ]]; then
+      echo "Accelerator supported qtypes from bitstream ${bitstream}: ${supported_qtypes}"
+    fi
+  fi
+
+  
   for thread in "${threads[@]}"; do
     for i in "${!synth_test_names[@]}"; do
+      if [[ "${acc}" == true && -n "${supported_qtypes}" ]]; then
+        test_qtype=$(extract_test_qtype "${synth_test_names[$i]}" "${synth_test_lines[$i]}")
+        if ! is_qtype_supported "${test_qtype}" "${supported_qtypes}"; then
+          echo "Skipping ${synth_test_names[$i]}: qtype ${test_qtype} not supported by ${bitstream}"
+          continue
+        fi
+      fi
       run_single_test "${test_binary}" "${acc}" "${tag}" "${synth_test_names[$i]}" "${synth_test_lines[$i]}" "${thread}"
     done
   done
