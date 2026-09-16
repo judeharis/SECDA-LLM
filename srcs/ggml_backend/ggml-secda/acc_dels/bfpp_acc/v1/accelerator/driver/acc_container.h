@@ -12,11 +12,11 @@
 #endif
 
 #include "../acc_config.sc.h"
-#include "secda_tools/axi_support/v5/axi_api_v5.h"
-#include "secda_tools/secda_profiler/profiler.h"
-#include "secda_tools/secda_utils/acc_helpers.h"
-#include "secda_tools/secda_utils/multi_threading.h"
-#include "secda_tools/secda_utils/utils.h"
+#include "secda-core/axi_support/v5/axi_api_v5.h"
+#include "secda-core/secda_profiler/profiler.h"
+#include "secda-core/secda_utils/acc_helpers.h"
+#include "secda-core/secda_utils/multi_threading.h"
+#include "secda-core/secda_utils/utils.h"
 
 // #define ACC_PRELOAD
 #ifdef ACC_PRELOAD

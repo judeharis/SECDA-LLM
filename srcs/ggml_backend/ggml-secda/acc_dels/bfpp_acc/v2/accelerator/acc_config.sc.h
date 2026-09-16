@@ -222,9 +222,9 @@ typedef struct {
 #include <systemc.h>
 
 #ifndef __SYNTHESIS__
-#include "secda_tools/axi_support/v5/axi_api_v5.h"
-#include "secda_tools/secda_integrator/sysc_types.h"
-#include "secda_tools/secda_profiler/profiler.h"
+#include "secda-core/axi_support/v5/axi_api_v5.h"
+#include "secda-core/secda_integrator/sysc_types.h"
+#include "secda-core/secda_profiler/profiler.h"
 #define DWAIT(x) wait(x)
 
 #ifdef VERBOSE_ACC

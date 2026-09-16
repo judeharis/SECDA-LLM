@@ -1,0 +1,32 @@
+{
+  "secda_init_path": "CHANGE_ME_project_root_path",
+  "bitstream_dir": "CHANGE_ME_project_root_path/hardware_automation/bitstreams",
+  "path_to_solutions": "srcs/ggml_backend/ggml-secda/acc_dels",
+  "hw_configs": "hardware_automation/configs",
+  "hw_link_dir": "hardware_automation/acc_srcs",
+  "out_dir": "hardware_automation/generated",
+  "vivado_2019_path": "CHANGE_ME_vivado_2019_bin_path",
+  "vivado_2024_path": "CHANGE_ME_vivado_2024_bin_path",
+  "boards": {
+    "KRIA": {
+      "board_user": "CHANGE_ME",
+      "board_hostname": "CHANGE_ME",
+      "board_port": "22",
+      "board_dir": "CHANGE_ME_remote_path_on_board",
+      "model": "kv260",
+      "fpga_manager_device": "fpga0"
+    }
+  },
+  "remote_servers": {
+    "CHANGE_ME_server_name": {
+      "gateway": "",
+      "server_user": "CHANGE_ME",
+      "server_hostname": "CHANGE_ME",
+      "server_port": 22,
+      "server_dir": "CHANGE_ME_remote_path_on_server",
+      "server_2019_path": "CHANGE_ME_vivado_2019_bin_path",
+      "server_2024_path": "CHANGE_ME_vivado_2024_bin_path"
+    }
+  },
+  "push_bullet_token": "CHANGE_ME"
+}

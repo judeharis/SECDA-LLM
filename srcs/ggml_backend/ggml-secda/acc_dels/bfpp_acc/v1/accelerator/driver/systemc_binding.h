@@ -4,9 +4,9 @@
 #ifdef SYSC
 
 #include "../acc.sc.h"
-#include "secda_tools/axi_support/v5/axi_api_v5.h"
-#include "secda_tools/secda_integrator/sysc_types.h"
-#include "secda_tools/secda_integrator/systemc_integrate.h"
+#include "secda-core/axi_support/v5/axi_api_v5.h"
+#include "secda-core/secda_integrator/sysc_types.h"
+#include "secda-core/secda_integrator/systemc_integrate.h"
 
 // This file is specfic to VM SystemC definition
 // This contains all the correct port/signal bindings to instantiate the VM

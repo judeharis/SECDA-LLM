@@ -13,29 +13,29 @@ if (GGML_SECDA)
     set(CMAKE_CXX_STANDARD 17)
     message(STATUS "===================GGML_SECDA====================")
 
-    # Prefer bundled secda_tools targets from the wrapper build when present.
-    if (BUILD_KRIA AND TARGET secda_tools_kria)
-        set(SECDA_TOOLS_LIBRARIES secda_tools_kria)
-    elseif (NOT BUILD_ARM AND TARGET secda_tools_sim)
-        set(SECDA_TOOLS_LIBRARIES secda_tools_sim)
-    elseif (TARGET secda_tools)
-        set(SECDA_TOOLS_LIBRARIES secda_tools)
+    # Prefer bundled secda_core targets from the wrapper build when present.
+    if (BUILD_KRIA AND TARGET secda_core_kria)
+        set(SECDA_CORE_LIBRARIES secda_core_kria)
+    elseif (NOT BUILD_ARM AND TARGET secda_core_simv5)
+        set(SECDA_CORE_LIBRARIES secda_core_simv5)
+    elseif (TARGET secda_core)
+        set(SECDA_CORE_LIBRARIES secda_core)
     endif()
 
-    if (TARGET secda_tools_sim)
-        set(SECDA_TOOLS_SIM_LIBRARIES secda_tools_sim)
+    if (TARGET secda_core_simv5)
+        set(SECDA_CORE_SIM_LIBRARIES secda_core_simv5)
     endif()
 
-    if (DEFINED SECDA_LLM_SECDA_TOOLS_INCLUDE_DIR)
-        set(SECDA_TOOLS_INCLUDES "${SECDA_LLM_SECDA_TOOLS_INCLUDE_DIR}")
+    if (DEFINED SECDA_LLM_SECDA_CORE_INCLUDE_DIR)
+        set(SECDA_CORE_INCLUDES "${SECDA_LLM_SECDA_CORE_INCLUDE_DIR}")
     endif()
 
-    if (NOT SECDA_TOOLS_LIBRARIES OR NOT SECDA_TOOLS_INCLUDES)
-        # SECDA_TOOLS is a library that provides tools and utilities for SECDA.
-        find_package(SECDA_TOOLS REQUIRED)
+    if (NOT SECDA_CORE_LIBRARIES OR NOT SECDA_CORE_INCLUDES)
+        # Out-of-tree SECDA-Core (built separately); see llama.cpp/cmake/FindSECDA_CORE.cmake.
+        find_package(SECDA_CORE REQUIRED)
     endif()
-    message(STATUS "SECDA found, Libraries: ${SECDA_TOOLS_LIBRARIES}")
-    message(STATUS "SECDA found, Includes: ${SECDA_TOOLS_INCLUDES}")
+    message(STATUS "SECDA found, Libraries: ${SECDA_CORE_LIBRARIES}")
+    message(STATUS "SECDA found, Includes: ${SECDA_CORE_INCLUDES}")
 
     if(NOT BUILD_ARM)
         # SystemC library required for x86-64 builds of SECDA (simulation)
@@ -113,11 +113,11 @@ if (GGML_SECDA)
 
     # Add the ggml-secda library to llama.cpp
     ggml_add_backend_library(ggml-secda ${GGML_SOURCES_SECDA} ${GGML_HEADERS_SECDA})
-    target_link_libraries(ggml-secda PRIVATE ${SECDA_TOOLS_LIBRARIES} ${SYSC_LIBRARIES} ${GGML_SECDA_ACC})
+    target_link_libraries(ggml-secda PRIVATE ${SECDA_CORE_LIBRARIES} ${SYSC_LIBRARIES} ${GGML_SECDA_ACC})
     target_include_directories(ggml-secda PRIVATE
         ${PROJECT_SOURCE_DIR}/src
         ${PROJECT_SOURCE_DIR}/include
-        ${SECDA_TOOLS_INCLUDES}
+        ${SECDA_CORE_INCLUDES}
     )
     target_link_directories(ggml-secda PRIVATE ${GGML_SECDA_ACC})
     message(STATUS "===================GGML_SECDA====================")

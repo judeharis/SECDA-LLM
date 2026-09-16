@@ -13,14 +13,14 @@ function(secda_llm_set_default option_name option_type default_value docstring)
 endfunction()
 
 set(SECDA_LLM_LLAMA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp" CACHE PATH "Path to the vendored llama.cpp source tree")
-set(SECDA_LLM_SECDA_TOOLS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/secda_tools" CACHE PATH "Path to the vendored secda_tools source tree")
+set(SECDA_LLM_SECDA_CORE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/secda_core" CACHE PATH "Path to the SECDA-Core submodule")
 
 if (NOT EXISTS "${SECDA_LLM_LLAMA_DIR}/CMakeLists.txt")
 	message(FATAL_ERROR "SECDA-LLM requires llama.cpp at ${SECDA_LLM_LLAMA_DIR}")
 endif()
 
 option(SECDA_LLM_ENABLE_SECDA "Enable the SECDA ggml backend" ON)
-option(SECDA_LLM_BUILD_SECDA_TOOLS "Build bundled secda_tools when SECDA is enabled" ON)
+option(SECDA_LLM_BUILD_SECDA_CORE "Build the SECDA-Core submodule when SECDA is enabled" ON)
 
 secda_llm_set_default(CMAKE_BUILD_TYPE STRING Release "Build type")
 secda_llm_set_default(LLAMA_BUILD_COMMON BOOL ON "Build llama.cpp common utilities")
@@ -32,8 +32,8 @@ secda_llm_set_default(LLAMA_BUILD_APP BOOL ON "Build the unified llama.cpp app")
 
 if (SECDA_LLM_ENABLE_SECDA)
 	secda_llm_set_default(GGML_SECDA BOOL ON "Enable the SECDA ggml backend")
-	secda_llm_set_default(SECDA_TOOLS_BUILD_SHARED BOOL ON "Build secda_tools as shared libraries")
-	secda_llm_set_default(SECDA_TOOLS_BUILD_TESTS BOOL OFF "Build secda_tools tests")
+	secda_llm_set_default(SECDA_CORE_BUILD_SHARED BOOL ON "Build SECDA-Core as shared libraries")
+	secda_llm_set_default(SECDA_CORE_BUILD_TESTS BOOL OFF "Build SECDA-Core tests")
 
 	if (NOT EXISTS "${SECDA_LLM_LLAMA_DIR}/ggml/src/ggml-secda/CMakeLists.txt")
 		message(FATAL_ERROR
@@ -47,34 +47,38 @@ if (SECDA_LLM_ENABLE_SECDA)
 			"Run ./setup.sh from the repository root and re-configure.")
 	endif()
 
-	if (SECDA_LLM_BUILD_SECDA_TOOLS)
-		if (NOT EXISTS "${SECDA_LLM_SECDA_TOOLS_DIR}/CMakeLists.txt")
+	if (SECDA_LLM_BUILD_SECDA_CORE)
+		if (NOT EXISTS "${SECDA_LLM_SECDA_CORE_DIR}/CMakeLists.txt")
 			message(FATAL_ERROR
-				"SECDA is enabled, but secda_tools was not found at ${SECDA_LLM_SECDA_TOOLS_DIR}. "
-				"Update SECDA_LLM_SECDA_TOOLS_DIR or disable SECDA_LLM_BUILD_SECDA_TOOLS.")
+				"SECDA is enabled, but SECDA-Core was not found at ${SECDA_LLM_SECDA_CORE_DIR}. "
+				"Run `git submodule update --init third_party/secda_core`, update SECDA_LLM_SECDA_CORE_DIR, "
+				"or disable SECDA_LLM_BUILD_SECDA_CORE.")
 		endif()
 
-		set(SECDA_LLM_SECDA_TOOLS_INCLUDE_DIR "${SECDA_LLM_SECDA_TOOLS_DIR}" CACHE PATH "Include directory for bundled secda_tools" FORCE)
-		add_subdirectory("${SECDA_LLM_SECDA_TOOLS_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/secda_tools")
+		# The include root is the submodule root: headers are #include "secda-core/...".
+		set(SECDA_LLM_SECDA_CORE_INCLUDE_DIR "${SECDA_LLM_SECDA_CORE_DIR}" CACHE PATH "Include directory for the SECDA-Core submodule" FORCE)
+		add_subdirectory("${SECDA_LLM_SECDA_CORE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/secda_core")
 
-		# set(SECDA_TOOLS_COMMON_DEFINITIONS DMA_PROFILE DMA_PRINT DEF_UDMA)
-		set(SECDA_TOOLS_COMMON_DEFINITIONS DEF_UDMA) #UBUF ENABLED
-
+		# SECDA-Core v5 dropped the CMA path: DEF_BUF selects u-dma-buf allocation
+		# (the old toolkit spelled this DEF_UDMA).
+		# set(SECDA_CORE_COMMON_DEFINITIONS DMA_PROFILE DMA_PRINT DEF_BUF)
+		set(SECDA_CORE_COMMON_DEFINITIONS DEF_BUF)
 
 		if (BUILD_ARM)
 			if (BUILD_KRIA)
-				if (TARGET secda_tools_kria)
-					target_compile_definitions(secda_tools_kria PUBLIC ${SECDA_TOOLS_COMMON_DEFINITIONS})
+				if (TARGET secda_core_kria)
+					target_compile_definitions(secda_core_kria PUBLIC ${SECDA_CORE_COMMON_DEFINITIONS})
 				endif()
 			else()
-				if (TARGET secda_tools)
-					target_compile_definitions(secda_tools PUBLIC ${SECDA_TOOLS_COMMON_DEFINITIONS})
+				if (TARGET secda_core)
+					target_compile_definitions(secda_core PUBLIC ${SECDA_CORE_COMMON_DEFINITIONS})
 				endif()
 			endif()
 		else()
-			foreach(secda_tools_target secda_tools_sim secda_tools_simv4 secda_tools_simv5)
-				if (TARGET ${secda_tools_target})
-					target_compile_definitions(${secda_tools_target} PUBLIC ${SECDA_TOOLS_COMMON_DEFINITIONS})
+			# The old toolkit also shipped a plain sim target and a v4 sim target; SECDA-Core ships v5 and v6 only.
+			foreach(secda_core_target secda_core_simv5 secda_core_simv6)
+				if (TARGET ${secda_core_target})
+					target_compile_definitions(${secda_core_target} PUBLIC ${SECDA_CORE_COMMON_DEFINITIONS})
 				endif()
 			endforeach()
 		endif()

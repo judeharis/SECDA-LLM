@@ -5,8 +5,7 @@
             "includePath": [
                 "${workspaceFolder}/**",
                 "/opt/systemc/systemc-2.3.3/include",
-                "/home/jude/Workspace/SECDA/secda_tools",
-                "/home/jude/Workspace/SECDA/secda_tools/secda_tools"
+                "${workspaceFolder}/third_party/secda_core"
             ],
             "defines": [
                 "SYSC"
