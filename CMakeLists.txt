@@ -60,7 +60,7 @@ if (SECDA_LLM_ENABLE_SECDA)
 		add_subdirectory("${SECDA_LLM_SECDA_CORE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/secda_core")
 
 		# SECDA-Core v5 dropped the CMA path: DEF_BUF selects u-dma-buf allocation
-		# (the old toolkit spelled this DEF_UDMA).
+		# (the old toolkit had a UDMA define for the same thing).
 		# set(SECDA_CORE_COMMON_DEFINITIONS DMA_PROFILE DMA_PRINT DEF_BUF)
 		set(SECDA_CORE_COMMON_DEFINITIONS DEF_BUF)
 
