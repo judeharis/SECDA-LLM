@@ -13,7 +13,22 @@ function(secda_llm_set_default option_name option_type default_value docstring)
 endfunction()
 
 set(SECDA_LLM_LLAMA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp" CACHE PATH "Path to the vendored llama.cpp source tree")
-set(SECDA_LLM_SECDA_CORE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/secda_core" CACHE PATH "Path to the SECDA-Core submodule")
+# SECDA-Core: $SECDA_CORE_DIR, else SECDA-DS's own SECDA-Core when this repo sits inside
+# SECDA-DS (found through the suite's .gitmodules), else the third_party/secda_core
+# submodule. The same order as ./secda. Inside SECDA-DS the submodule is left
+# unchecked-out, so the suite holds one SECDA-Core.
+set(_secda_core_default "${CMAKE_CURRENT_SOURCE_DIR}/third_party/secda_core")
+get_filename_component(_secda_suite "${CMAKE_CURRENT_SOURCE_DIR}" DIRECTORY)
+if (DEFINED ENV{SECDA_CORE_DIR})
+	set(_secda_core_default "$ENV{SECDA_CORE_DIR}")
+elseif (EXISTS "${_secda_suite}/.gitmodules" AND EXISTS "${_secda_suite}/SECDA-Core/secda-core")
+	file(READ "${_secda_suite}/.gitmodules" _secda_suite_modules)
+	string(FIND "${_secda_suite_modules}" "path = SECDA-Core" _secda_in_suite)
+	if (NOT _secda_in_suite EQUAL -1)
+		set(_secda_core_default "${_secda_suite}/SECDA-Core")
+	endif()
+endif()
+set(SECDA_LLM_SECDA_CORE_DIR "${_secda_core_default}" CACHE PATH "Path to SECDA-Core")
 
 if (NOT EXISTS "${SECDA_LLM_LLAMA_DIR}/CMakeLists.txt")
 	message(FATAL_ERROR "SECDA-LLM requires llama.cpp at ${SECDA_LLM_LLAMA_DIR}")
@@ -51,7 +66,7 @@ if (SECDA_LLM_ENABLE_SECDA)
 		if (NOT EXISTS "${SECDA_LLM_SECDA_CORE_DIR}/CMakeLists.txt")
 			message(FATAL_ERROR
 				"SECDA is enabled, but SECDA-Core was not found at ${SECDA_LLM_SECDA_CORE_DIR}. "
-				"Run `git submodule update --init third_party/secda_core`, update SECDA_LLM_SECDA_CORE_DIR, "
+				"Run `git submodule update --init third_party/secda_core`, set SECDA_CORE_DIR or SECDA_LLM_SECDA_CORE_DIR, "
 				"or disable SECDA_LLM_BUILD_SECDA_CORE.")
 		endif()
 

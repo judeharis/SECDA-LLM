@@ -7,5 +7,22 @@ import os
 import sys
 
 here = os.path.dirname(os.path.abspath(__file__))
-target = os.path.join(here, "third_party", "secda_core", "tools", "secda_cli.py")
+
+
+def secda_core_dir():
+    """$SECDA_CORE_DIR; inside SECDA-DS, the suite's own SECDA-Core (found through
+    its .gitmodules); else this repo's third_party/secda_core submodule. The
+    same order as the build uses."""
+    if os.environ.get("SECDA_CORE_DIR"):
+        return os.path.abspath(os.environ["SECDA_CORE_DIR"])
+    suite = os.path.dirname(here)
+    gitmodules = os.path.join(suite, ".gitmodules")
+    if os.path.isdir(os.path.join(suite, "SECDA-Core", "secda-core")) and os.path.isfile(gitmodules):
+        with open(gitmodules) as f:
+            if "path = SECDA-Core" in f.read():
+                return os.path.join(suite, "SECDA-Core")
+    return os.path.join(here, "third_party", "secda_core")
+
+
+target = os.path.join(secda_core_dir(), "tools", "secda_cli.py")
 os.execv(sys.executable, [sys.executable, target] + sys.argv[1:])
