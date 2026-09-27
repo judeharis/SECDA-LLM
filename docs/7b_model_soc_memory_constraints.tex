@@ -1,0 +1,16 @@
+\subsubsection{Discussion: Memory Constraints of Edge SoC Deployment}
+\label{sec:discussion-memory-constraints}
+
+While the BFPP-Acc accelerator itself places no architectural limit on model size -- it operates on small, fixed-size tiles of data regardless of how large the source model is -- our experiments show that model scale on this platform is bounded not by the accelerator, but by the memory available on the host board.
+On our target SoC, the AMD Kria KV260~\cite{amdKriaKV260}, which provides $3.8$\,GB of shared DRAM, we found that even the smallest practical quantisation of a $7$-billion-parameter model, Llama~2~7B \cite{touvron2023llama2} quantised to $3$ bits per weight, could not be executed reliably through the llama.cpp runtime~\cite{LLP,GGML}.
+The quantised model file alone occupies close to $2.8$\,GB, while only around $2.3$\,GB remains available once memory reserved for the accelerator's data transfers and the board's general-purpose Linux environment is accounted for.
+Because the runtime keeps the full model resident in memory during inference, and a realistic conversation context adds roughly another gigabyte on top for cached attention state, the memory required exceeds what the board provides, irrespective of the accelerator's own performance, which we verified independently at smaller model scales~\cite{harisSECDAEfficientHardware2021}.
+
+We confirmed this is a resource-availability issue rather than an accelerator fault by reproducing the failure directly on hardware.
+Two different memory-loading strategies within the runtime were tested~\cite{kerrisk2010linux}: one causes the system to spend excessive time repeatedly re-reading parts of the model from slow storage; the other causes the operating system to terminate the process outright once memory is exhausted.
+In both cases the failure occurred before, or independently of, any interaction with the accelerator.
+
+This suggests a practical path forward.
+Much of the memory overhead observed here comes from running a general-purpose desktop operating system and its memory-management behaviour, not from the accelerator's own design.
+A bare-metal or minimal-firmware control layer built around the same accelerator interface could, in principle, stream model weights directly from storage in small increments rather than requiring the entire model to reside in memory at once, avoiding this constraint.
+Realising this would mean reimplementing responsibilities currently handled by Linux and llama.cpp, and remains future work -- but it indicates that the SoC's compute capability, not its software environment, need not be the limiting factor for larger models.
