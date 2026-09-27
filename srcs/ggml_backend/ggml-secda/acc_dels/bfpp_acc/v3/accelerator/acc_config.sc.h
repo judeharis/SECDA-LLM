@@ -36,16 +36,6 @@
 #define DMA_INP_SIZE 0x800000
 #define DMA_WGT_SIZE (DMA_IN_BUF_SIZE - DMA_INP_SIZE) // 208 MB - 8 MB = 200 MB
 
-#define dma_in0 0x38000000
-#define dma_in1 0x3A000000
-#define dma_in2 0x3C000000
-#define dma_in3 0x3E000000
-
-#define dma_out0 0x39000000
-#define dma_out1 0x3B000000
-#define dma_out2 0x3D000000
-#define dma_out3 0x40000000
-
 #else
 
 // Z1
@@ -58,15 +48,6 @@
 #define dma_addr1 0x40410000
 #define dma_addr2 0x40420000
 #define dma_addr3 0x40430000
-
-#define dma_in0 0x18000000
-#define dma_in1 0x1a000000
-#define dma_in2 0x1c000000
-#define dma_in3 0x1e000000
-#define dma_out0 0x18800000
-#define dma_out1 0x1a800000
-#define dma_out2 0x1c800000
-#define dma_out3 0x1e800000
 
 #define DMA_BL 4194304
 #define DMA_IN_BUF_SIZE 0x0800000  // 8MB
@@ -261,7 +242,7 @@ typedef struct {
 #include <systemc.h>
 
 #ifndef __SYNTHESIS__
-#include "secda-core/axi_support/v5/axi_api_v5.h"
+#include "secda-core/axi_support/v6/axi_api.h"
 #include "secda-core/secda_integrator/sysc_types.h"
 #include "secda-core/secda_profiler/profiler.h"
 #define DWAIT(x) wait(x)

@@ -13,17 +13,14 @@ if (GGML_SECDA)
     set(CMAKE_CXX_STANDARD 17)
     message(STATUS "===================GGML_SECDA====================")
 
-    # Prefer bundled secda_core targets from the wrapper build when present.
-    if (BUILD_KRIA AND TARGET secda_core_kria)
-        set(SECDA_CORE_LIBRARIES secda_core_kria)
-    elseif (NOT BUILD_ARM AND TARGET secda_core_simv5)
-        set(SECDA_CORE_LIBRARIES secda_core_simv5)
-    elseif (TARGET secda_core)
-        set(SECDA_CORE_LIBRARIES secda_core)
-    endif()
-
-    if (TARGET secda_core_simv5)
-        set(SECDA_CORE_SIM_LIBRARIES secda_core_simv5)
+    # SECDA-Core axi_support v6: secda_corev6 on the boards (KRIA is a design
+    # define, the library is board-neutral), secda_core_simv6 in simulation.
+    # Prefer the targets from SECDA-LLM's wrapper build when present.
+    if (BUILD_ARM AND TARGET secda_corev6)
+        set(SECDA_CORE_LIBRARIES secda_corev6)
+    elseif (NOT BUILD_ARM AND TARGET secda_core_simv6)
+        set(SECDA_CORE_LIBRARIES secda_core_simv6)
+        set(SECDA_CORE_SIM_LIBRARIES secda_core_simv6)
     endif()
 
     if (DEFINED SECDA_LLM_SECDA_CORE_INCLUDE_DIR)
@@ -31,7 +28,7 @@ if (GGML_SECDA)
     endif()
 
     if (NOT SECDA_CORE_LIBRARIES OR NOT SECDA_CORE_INCLUDES)
-        # Out-of-tree SECDA-Core (built separately); see llama.cpp/cmake/FindSECDA_CORE.cmake.
+        # Out-of-tree SECDA-Core (built separately); see SECDA-LLM/cmake/FindSECDA_CORE.cmake.
         find_package(SECDA_CORE REQUIRED)
     endif()
     message(STATUS "SECDA found, Libraries: ${SECDA_CORE_LIBRARIES}")

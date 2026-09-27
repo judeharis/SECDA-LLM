@@ -4,7 +4,7 @@
 #ifdef SYSC
 
 #include "../acc.sc.h"
-#include "secda-core/axi_support/v5/axi_api_v5.h"
+#include "secda-core/axi_support/v6/axi_api.h"
 #include "secda-core/secda_integrator/sysc_types.h"
 #include "secda-core/secda_integrator/systemc_integrate.h"
 

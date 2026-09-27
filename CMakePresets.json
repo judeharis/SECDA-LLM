@@ -199,8 +199,34 @@
         "CMAKE_CXX_COMPILER": "/usr/bin/aarch64-linux-gnu-g++",
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_SYSTEM_PROCESSOR": "aarch64",
+        "CMAKE_SYSTEM_NAME": "Linux",
         "GGML_SECDA": "ON",
         "BUILD_ARM": "ON",
+        "BUILD_KRIA": "ON",
+        "SECDA_QK2": "ON",
+        "SECDA_QK3": "ON",
+        "SECDA_QK4": "ON",
+        "SECDA_QK5": "ON",
+        "SECDA_QK6": "ON",
+        "SECDA_BFPP_ACC_V3": "ON"
+      }
+    },
+    {
+      "name": "SECDA-aarch64-kria",
+      "displayName": "SECDA-aarch64-kria (KV260, Release)",
+      "description": "Cross-compile for the KV260, as benchmark/scripts/compile_send_kria.sh does",
+      "inherits": [
+        "secda-llm-base"
+      ],
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "/usr/bin/aarch64-linux-gnu-gcc",
+        "CMAKE_CXX_COMPILER": "/usr/bin/aarch64-linux-gnu-g++",
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_SYSTEM_PROCESSOR": "aarch64",
+        "CMAKE_SYSTEM_NAME": "Linux",
+        "GGML_SECDA": "ON",
+        "BUILD_ARM": "ON",
+        "BUILD_KRIA": "ON",
         "SECDA_QK2": "ON",
         "SECDA_QK3": "ON",
         "SECDA_QK4": "ON",

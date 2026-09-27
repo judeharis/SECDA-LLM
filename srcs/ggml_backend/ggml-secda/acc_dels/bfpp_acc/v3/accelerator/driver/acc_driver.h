@@ -10,8 +10,6 @@
 namespace bfpp_acc {
 
 unsigned int dma_addrs[4] = {dma_addr0, dma_addr1, dma_addr2, dma_addr3};
-unsigned int dma_addrs_in[4] = {dma_in0, dma_in1, dma_in2, dma_in3};
-unsigned int dma_addrs_out[4] = {dma_out0, dma_out1, dma_out2, dma_out3};
 struct acc_times *a_t;
 static class Profile profile;
 

@@ -74,30 +74,12 @@ if (SECDA_LLM_ENABLE_SECDA)
 		set(SECDA_LLM_SECDA_CORE_INCLUDE_DIR "${SECDA_LLM_SECDA_CORE_DIR}" CACHE PATH "Include directory for the SECDA-Core submodule" FORCE)
 		add_subdirectory("${SECDA_LLM_SECDA_CORE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/secda_core")
 
-		# SECDA-Core v5 dropped the CMA path: DEF_BUF selects u-dma-buf allocation
-		# (the old toolkit had a UDMA define for the same thing).
-		# set(SECDA_CORE_COMMON_DEFINITIONS DMA_PROFILE DMA_PRINT DEF_BUF)
-		set(SECDA_CORE_COMMON_DEFINITIONS DEF_BUF)
-
-		if (BUILD_ARM)
-			if (BUILD_KRIA)
-				if (TARGET secda_core_kria)
-					target_compile_definitions(secda_core_kria PUBLIC ${SECDA_CORE_COMMON_DEFINITIONS})
-				endif()
-			else()
-				if (TARGET secda_core)
-					target_compile_definitions(secda_core PUBLIC ${SECDA_CORE_COMMON_DEFINITIONS})
-				endif()
-			endif()
-		else()
-			# The old toolkit also shipped a plain sim target and a v4 sim target; SECDA-Core ships v5 and v6 only.
-			foreach(secda_core_target secda_core_simv5 secda_core_simv6)
-				if (TARGET ${secda_core_target})
-					target_compile_definitions(${secda_core_target} PUBLIC ${SECDA_CORE_COMMON_DEFINITIONS})
-				endif()
-			endforeach()
-		endif()
+		# axi_support v6 allocates every DMA buffer through u-dma-buf (no fixed
+		# addresses, no /dev/mem fallback), so there is no DEF_BUF switch to set.
 	endif()
 endif()
+
+# SECDA's Find modules (FindSECDA_CORE, FindSYSC) live here, ahead of llama.cpp's own cmake/.
+list(PREPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 add_subdirectory("${SECDA_LLM_LLAMA_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/llama.cpp")

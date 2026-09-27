@@ -13,7 +13,7 @@
 #endif
 
 #include "../acc_config.sc.h"
-#include "secda-core/axi_support/v5/axi_api_v5.h"
+#include "secda-core/axi_support/v6/axi_api.h"
 #include "secda-core/secda_profiler/profiler.h"
 #include "secda-core/secda_utils/acc_helpers.h"
 #include "secda-core/secda_utils/utils.h"
