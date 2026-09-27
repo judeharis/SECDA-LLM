@@ -1,14 +1,7 @@
 message(STATUS "===================BFP ACC===================")
-if (SECDA_BFPP_ACC_V1)
-message(STATUS "v1 IS BROKEN, PLEASE USE v3")
-message(STATUS "Adding bfpp_acc_v1 to build")
-add_subdirectory(v1)
-endif()
-
-if (SECDA_BFPP_ACC_V2)
-message(STATUS "v2 IS BROKEN, PLEASE USE v3")
-message(STATUS "Adding bfpp_acc_v2 to build")
-add_subdirectory(v2)
+# v1/v2 are retired to legacy/ (broken, SECDA-Core axi_support v5 only).
+if (SECDA_BFPP_ACC_V1 OR SECDA_BFPP_ACC_V2)
+message(FATAL_ERROR "bfpp_acc v1/v2 are retired (acc_dels/bfpp_acc/legacy/); use SECDA_BFPP_ACC_V3 or SECDA_BFPP_ACC_V4")
 endif()
 
 if (SECDA_BFPP_ACC_V3)

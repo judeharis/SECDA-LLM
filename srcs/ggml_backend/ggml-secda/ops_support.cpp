@@ -13,10 +13,8 @@
 #include "acc_dels/bfpp_acc/v3/accelerator/driver_batches/acc_driver_connector.h"
 #elif defined(BFPP_ACC_V3)
 #include "acc_dels/bfpp_acc/v3/accelerator/driver/acc_driver_connector.h"
-#elif defined(BFPP_ACC_V2)
-#include "acc_dels/bfpp_acc/v2/accelerator/driver/acc_driver_connector.h"
 #else
-#include "acc_dels/bfpp_acc/v1/accelerator/driver/acc_driver_connector.h"
+#error "ggml-secda needs BFPP_ACC_V3 or BFPP_ACC_V4 (v1/v2 are retired to acc_dels/bfpp_acc/legacy/)"
 #endif
 
 #include "ggml-quants.h"
