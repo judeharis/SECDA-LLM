@@ -28,10 +28,10 @@
 #define DMA_BL 4194304
 #define DMA_RANGE_START 0x0000000037400000
 #define DMA_RANGE_END 0x00000000773FFFFF
-#define DMA_RANGE_OFFSET 0xC00000         // 1.5MB
-#define DMA_RANGE_SIZE 0x0000000040000000 // 1GB
-#define DMA_IN_BUF_SIZE 0xC000000 // 192 MB
-#define DMA_OUT_BUF_SIZE 0x1000000 // 16 MB
+#define DMA_RANGE_OFFSET 0xC00000                               // 1.5MB
+#define DMA_RANGE_SIZE 0x0000000040000000                       // 1GB
+#define DMA_IN_BUF_SIZE 0xC000000                               // 192 MB
+#define DMA_OUT_BUF_SIZE 0x1000000                              // 16 MB
 #define CMA_BUF_TOTAL_SIZE (DMA_IN_BUF_SIZE + DMA_OUT_BUF_SIZE) // 208 MB
 #define DMA_INP_SIZE 0x800000
 #define DMA_WGT_SIZE (DMA_IN_BUF_SIZE - DMA_INP_SIZE) // 208 MB - 8 MB = 200 MB
@@ -110,8 +110,8 @@
 //==============================================================================
 
 // MMIO Registers
-#define HWC_Monitor_Count 15
-#define CTRL_Reg_Count 8
+#define HWC_Monitor_Count 13
+#define CTRL_Reg_Count 10
 
 // Number of PEs
 #define BFPP_COUNT 1
@@ -368,9 +368,7 @@ struct BFPP_vars {
   DEFINE_SC_SIGNAL(unsigned int, wb_idx);
   DEFINE_SC_SIGNAL(unsigned int, ib_idx);
   DEFINE_SC_SIGNAL(unsigned int, wgt_type);
-  DEFINE_SC_SIGNAL(unsigned int, ComputeSS);
-  DEFINE_SC_SIGNAL(unsigned int, LoadWeightSS);
-  DEFINE_SC_SIGNAL(unsigned int, LoadInputSS);
+  DEFINE_SC_SIGNAL(unsigned int, computeSS);
 
   // Declare I/O ports and fifos for the hardware submodule
   sc_fifo<ADATA> wgt_fifo1;
@@ -379,7 +377,8 @@ struct BFPP_vars {
   sc_fifo<ADATA> wgt_fifo4;
   sc_fifo<ADATA> inp_fifo;
   sc_fifo<ADATA> dout1;
-  sc_fifo<float> temp_fifo;
+  sc_out<unsigned int> wgtlSS;
+  sc_out<unsigned int> inplSS;
 
 #ifndef __SYNTHESIS__
   BFPP_vars(int size, int sid)
@@ -387,23 +386,21 @@ struct BFPP_vars {
         INITSIGPORT(bfpp_start, sid), INITSIGPORT(bfpp_ready, sid),
         INITSIGPORT(kb, sid), INITSIGPORT(wbs, sid), INITSIGPORT(ibs, sid),
         INITSIGPORT(wb_idx, sid), INITSIGPORT(ib_idx, sid),
-        INITSIGPORT(wgt_type, sid), INITSIGPORT(ComputeSS, sid),
-        INITSIGPORT(LoadWeightSS, sid), INITSIGPORT(LoadInputSS, sid),
+        INITSIGPORT(wgt_type, sid), INITSIGPORT(computeSS, sid),
+        INITSIGPORT(wgtlSS, sid), INITSIGPORT(inplSS, sid),
         wgt_fifo1("wgt_fifo1", size), wgt_fifo2("wgt_fifo2", size),
         wgt_fifo3("wgt_fifo3", size), wgt_fifo4("wgt_fifo4", size),
-        inp_fifo("inp_fifo", size), dout1("dout1", size),
-        temp_fifo("temp_fifo", size) {}
+        inp_fifo("inp_fifo", size), dout1("dout1", size) {}
 
 #else
   BFPP_vars(int size)
       : load_inp("load_inp"), load_wgt("load_wgt"), bfpp_start("bfpp_start"),
         bfpp_ready("bfpp_ready"), kb("kb"), wbs("wbs"), ibs("ibs"),
         wb_idx("wb_idx"), ib_idx("ib_idx"), wgt_type("wgt_type"),
-        ComputeSS("ComputeSS"), LoadWeightSS("LoadWeightSS"),
-        LoadInputSS("LoadInputSS"), wgt_fifo1("wgt_fifo1", size),
-        wgt_fifo2("wgt_fifo2", size), wgt_fifo3("wgt_fifo3", size),
-        wgt_fifo4("wgt_fifo4", size), inp_fifo("inp_fifo", size),
-        dout1("dout1", size), temp_fifo("temp_fifo", size) {
+        computeSS("computeSS"), wgtlSS("wgtlSS"), inplSS("inplSS"),
+        wgt_fifo1("wgt_fifo1", size), wgt_fifo2("wgt_fifo2", size),
+        wgt_fifo3("wgt_fifo3", size), wgt_fifo4("wgt_fifo4", size),
+        inp_fifo("inp_fifo", size), dout1("dout1", size) {
 
 // Define any HLS pragma for ports/fifos declared here
 #pragma HLS resource variable = wgt_fifo1 core = FIFO_SRL
@@ -412,7 +409,6 @@ struct BFPP_vars {
 #pragma HLS resource variable = wgt_fifo4 core = FIFO_SRL
 #pragma HLS resource variable = inp_fifo core = FIFO_SRL
 #pragma HLS resource variable = dout1 core = FIFO_SRL
-    // #pragma HLS resource variable = temp_fifo core = FIFO_SRL
   }
 #endif
 };

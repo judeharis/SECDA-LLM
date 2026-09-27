@@ -20,10 +20,7 @@ SC_MODULE(BFPP_UNIT) {
   sc_in<unsigned int> ib_idx;   // compute ib index
   sc_in<unsigned int> wgt_type; // weight type
 
-  // ======================================================================
   // FIFOs
-  // ======================================================================
-
   sc_fifo_in<ADATA> wgt_fifo1;
   sc_fifo_in<ADATA> wgt_fifo2;
   sc_fifo_in<ADATA> wgt_fifo3;
@@ -31,91 +28,65 @@ SC_MODULE(BFPP_UNIT) {
 
   sc_fifo_in<ADATA> inp_fifo;
   sc_fifo_out<ADATA> dout1;
-  sc_fifo_in<float> temp_fifo_in;
-  sc_fifo_out<float> temp_fifo_out;
 
-  // ======================================================================
   // Status Signals
-  // ======================================================================
-
   sc_signal<bool> bfpp_free;
-  sc_signal<unsigned int> load_wi;
-  sc_signal<unsigned int> load_ii;
-  DEFINE_SHAKE_SIGNALS(ComputeCore);
-  DEFINE_SHAKE_SIGNALS(ComputeLoad);
 
-  // ======================================================================
-  // Debug
-  // ======================================================================
-  DEFINE_STATUS_SIGNALS(unsigned int, LoadWeight);
-  DEFINE_STATUS_SIGNALS(unsigned int, LoadInput);
-  DEFINE_STATUS_SIGNALS(unsigned int, Compute);
-
-  // ======================================================================
   // Memory
-  // ======================================================================
+  // Weight SUP_KMB super-blocks (3-bit quantization)
 
-  // Weight uF super-blocks (3-bit quantization)
 #if defined(BFPP_QK3) || defined(BFPP_QK5)
-  bool w_hmask[SUP_KMB][16][16]; // quants - high bit
+  bool w_hmask[SUP_KMB][QK_K]; // quants - high bit
 #endif
 
 #if defined(BFPP_QK6)
-  sc_uint<2> w_qs3[SUP_KMB][16][16]; // quants - low - high - high 2 bits
+  sc_uint<2> w_qs3[SUP_KMB][QK_K]; // quants - low - high - high 2 bits
 #endif
 
 #if defined(BFPP_QK4) || defined(BFPP_QK5) || defined(BFPP_QK6)
-  sc_uint<2> w_qs2[SUP_KMB][16][16]; // quants - low - high  2 bits
+  sc_uint<2> w_qs2[SUP_KMB][QK_K]; // quants - low - high  2 bits
 #endif
 
-  sc_uint<2> w_qs[SUP_KMB][16][16];        // quants - low - low 2 bits
+  sc_uint<2> w_qs[SUP_KMB][QK_K];          // quants - low - low 2 bits
   sc_uint<8> w_scales[SUP_KMB][QK_K / 16]; // scales, quantized with 6-8 bits
   uint16_t w_d[SUP_KMB];                   // super-block scale
   uint16_t w_dmin[SUP_KMB];                // super-block mins
 
-  // Input uF super-blocks
-  float i_d[uF];              // super-block scale
-  sc_int<8> i_qs[uF][16][16]; // quants
-  sc_int<16> i_bsums[uF][16]; // input block sums
+  // Input SUP_KNB super-blocks
+  float i_d[SUP_KNB];              // super-block scale
+  sc_int<8> i_qs[SUP_KNB][QK_K];   // quants
+  sc_int<16> i_bsums[SUP_KNB][16]; // input block sums
 
-  // ======================================================================
-  // Compute Core RegFiles
-  // ======================================================================
-  sc_uint<2> wqs[QK_K];
-  sc_uint<2> wqs2[QK_K];
-  sc_uint<2> wqs3[QK_K];
-  bool wm[QK_K];
+  // Debug
+  sc_signal<unsigned int> computeS;
+  sc_out<unsigned int> computeSS;
 
-  sc_int<8> iqs[QK_K];
-  sc_int<16> ibsums[16];
+  sc_signal<unsigned int> wgtlS;
+  sc_out<unsigned int> wgtlSS;
 
-  int8_t wgt[QK_K];
-  sc_uint<8> wscales[16];
-  sc_uint<6> wsmins[16];
-  uint16_t wd;
-  uint16_t wdmin;
-  float id;
+  sc_signal<unsigned int> inplS;
+  sc_out<unsigned int> inplSS;
 
   // Functions
+  float vec_dot(int, int);
+  float vec_dot_unroll_2(int wi, int ii, int ii2);
   float ggml_compute_fp16_to_fp32(uint16_t h);
   uint32_t fp32_to_bits(float f);
   float fp32_from_bits(uint32_t w);
   void u96_to_u6x16(sc_biguint<96> in, sc_uint<8> * out);
   void u96_to_u6x8x2(sc_biguint<96> in, sc_uint<8> * out);
+  // void weight_mapper(int wb);
 
+  void weight_mapper(int wb, sc_fifo_in<ADATA> &wgt_fifo);
+  void weight_mapper2(int wb);
+  void weight_mapper2x(int wb, unsigned int wbs_l1, unsigned int wbs_l2);
   void weight_mapper4x(int wb, unsigned int wbs_l1, unsigned int wbs_l2,
                        unsigned int wbs_l3, unsigned int wbs_l4);
-
-  float compute_load(int wi, int ii);
-  float vec_dot();
 
   // Modules
   void LoadWeights();
   void LoadInputs();
   void Compute();
-
-  void ComputeLoad();
-  void ComputeCore();
 
   // Constructors
   void init(sc_in<bool> & clock, sc_in<bool> & reset, BFPP_vars & vars) {
@@ -141,12 +112,10 @@ SC_MODULE(BFPP_UNIT) {
     this->wgt_fifo4(vars.wgt_fifo4);
     this->inp_fifo(vars.inp_fifo);
     this->dout1(vars.dout1);
-    this->temp_fifo_in(vars.temp_fifo);
-    this->temp_fifo_out(vars.temp_fifo);
 
-    this->ComputeSS(vars.ComputeSS);
-    this->LoadWeightSS(vars.LoadWeightSS);
-    this->LoadInputSS(vars.LoadInputSS);
+    this->wgtlSS(vars.wgtlSS);
+    this->inplSS(vars.inplSS);
+    this->computeSS(vars.computeSS);
   }
 
   SC_HAS_PROCESS(BFPP_UNIT);
@@ -162,32 +131,26 @@ SC_MODULE(BFPP_UNIT) {
     SC_CTHREAD(Compute, clock);
     reset_signal_is(reset, true);
 
-
 #if defined(BFPP_QK3) || defined(BFPP_QK5)
 #pragma HLS array_partition variable = w_hmask dim = 1 cyclic factor = 2
-// #pragma HLS array_partition variable = w_hmask dim = 2 cyclic factor = 16
-#pragma HLS array_partition variable = w_hmask dim = 3 cyclic factor = 16
+#pragma HLS array_partition variable = w_hmask dim = 2 cyclic factor = 16
 
 #endif
 
 #if defined(BFPP_QK4) || defined(BFPP_QK5) || defined(BFPP_QK6)
 #pragma HLS array_partition variable = w_qs2 dim = 1 cyclic factor = 2
-// #pragma HLS array_partition variable = w_qs2 dim = 2 cyclic factor = 16
-#pragma HLS array_partition variable = w_qs2 dim = 3 cyclic factor = 16
+#pragma HLS array_partition variable = w_qs2 dim = 2 cyclic factor = 16
 #pragma HLS RESOURCE variable = w_qs2 core = RAM_T2P_BRAM
 #endif
 
 #if defined(BFPP_QK6)
 #pragma HLS array_partition variable = w_qs3 dim = 1 cyclic factor = 2
-// #pragma HLS array_partition variable = w_qs3 dim = 2 cyclic factor = 16
-#pragma HLS array_partition variable = w_qs3 dim = 3 cyclic factor = 16
+#pragma HLS array_partition variable = w_qs3 dim = 2 cyclic factor = 16
 #pragma HLS RESOURCE variable = w_qs3 core = RAM_T2P_BRAM
 #endif
 
 #pragma HLS array_partition variable = w_qs dim = 1 cyclic factor = 2
-// #pragma HLS array_partition variable = w_qs dim = 2 cyclic factor = 16
-#pragma HLS array_partition variable = w_qs dim = 3 cyclic factor = 16
-
+#pragma HLS array_partition variable = w_qs dim = 2 cyclic factor = 16
 #pragma HLS array_partition variable = w_scales dim = 1 cyclic factor = 2
 #pragma HLS array_partition variable = w_scales dim = 2 cyclic factor = 16
 #pragma HLS array_partition variable = w_d dim = 1 cyclic factor = 4
@@ -199,21 +162,8 @@ SC_MODULE(BFPP_UNIT) {
 #pragma HLS RESOURCE variable = w_dmin core = RAM_T2P_BRAM
 
 #pragma HLS array_partition variable = i_bsums dim = 2 cyclic factor = 16
-// #pragma HLS array_partition variable = i_qs dim = 2 cyclic factor = 16
-#pragma HLS array_partition variable = i_qs dim = 3 cyclic factor = 16
+#pragma HLS array_partition variable = i_qs dim = 2 cyclic factor = 16
 #pragma HLS array_partition variable = i_d dim = 1 cyclic factor = 16
-
-#pragma HLS array_partition variable = wqs complete
-#pragma HLS array_partition variable = wqs2 complete
-#pragma HLS array_partition variable = wqs3 complete
-#pragma HLS array_partition variable = wm complete
-
-#pragma HLS array_partition variable = iqs complete
-#pragma HLS array_partition variable = ibsums complete
-
-#pragma HLS array_partition variable = wgt complete
-#pragma HLS array_partition variable = wscales complete
-#pragma HLS array_partition variable = wsmins complete
   }
 };
 

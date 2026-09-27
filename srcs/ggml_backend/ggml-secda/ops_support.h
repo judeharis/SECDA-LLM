@@ -35,6 +35,9 @@ void ggml_secda_mul_mat(ggml_secda_context *ctx, struct ggml_tensor *node);
 
 void ggml_secda_out_prod(ggml_secda_context *ctx, struct ggml_tensor *node);
 
+// Jude: Added
+void ggml_secda_soft_max(ggml_secda_context *ctx, struct ggml_tensor *node);
+
 typedef void (*ggml_from_float_to_mat_t)(const float *GGML_RESTRICT x,
                                          void *GGML_RESTRICT y, int64_t nr,
                                          int64_t k, int64_t bs);

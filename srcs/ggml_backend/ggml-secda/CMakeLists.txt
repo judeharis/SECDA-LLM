@@ -52,6 +52,11 @@ if (GGML_SECDA)
     option(SECDA_BFPP_ACC_V1 "SECDA: BFPP ACC V1 support" OFF)
     option(SECDA_BFPP_ACC_V2 "SECDA: BFPP ACC V2 support" OFF)
     option(SECDA_BFPP_ACC_V3 "SECDA: BFPP ACC V3 support" OFF)
+    option(SECDA_BFPP_ACC_V3_DRIVER_BATCHES "SECDA: BFPP ACC V3 batch-capable driver (accelerator/driver_batches instead of accelerator/driver)" OFF)
+    # Jude: Added - V4 adds a tiled/streaming hardware SOFT_MAX unit on top of
+    # V3's MUL_MAT datapath (forked from V3's plain driver, not driver_batches).
+    option(SECDA_BFPP_ACC_V4 "SECDA: BFPP ACC V4 support (adds hardware softmax)" OFF)
+    option(SECDA_BFPP_ACC_V4_DRIVER_BATCHES "SECDA: BFPP ACC V4 batch-capable driver (accelerator/driver_batches instead of accelerator/driver)" OFF)
 
     # Handling Quantization Formats
     if (SECDA_QK2)
@@ -78,17 +83,35 @@ if (GGML_SECDA)
     if(SECDA_ACC_PROFILE)
         message(STATUS "SECDA_ACC_PROFILE enabled")
         list(APPEND SECDA_ACC_SUPPORT "-DSECDA_BACKEND_PRINT -DACC_PROFILE -DDMA_PROFILE -DDMA_PRINT")
+        # list(APPEND SECDA_ACC_SUPPORT "-DACC_PROFILE -DDMA_PROFILE -DDMA_PRINT")
+
         # list(APPEND SECDA_ACC_SUPPORT "-DACC_PROFILE")
     endif()
 
     # Handling Accelerators
     # add_subdirectory(acc_dels)
-    if (SECDA_BFPP_ACC_V3)
+    # Jude: Added - V4 takes priority over V3 when both would otherwise be
+    # inferred, matching the existing V3-over-V2-over-V1 priority chain.
+    if (SECDA_BFPP_ACC_V4)
+        message(STATUS "BFPP Accelerator V4 enabled")
+        list(APPEND GGML_CDEF_PUBLIC BFPP_ACC_V4)
+        list(APPEND SECDA_ACC_SUPPORT BFPP_ACC_V4)
+        set(GGML_SECDA_ACC bfpp_acc_v4_driver_connector)
+        if (SECDA_BFPP_ACC_V4_DRIVER_BATCHES)
+            message(STATUS "BFPP Accelerator V4 batch-capable driver (driver_batches) enabled")
+            list(APPEND SECDA_ACC_SUPPORT SECDA_DRIVER_BATCHES)
+        endif()
+
+    elseif (SECDA_BFPP_ACC_V3)
         message(STATUS "BFPP Accelerator V3 enabled")
         list(APPEND GGML_CDEF_PUBLIC BFPP_ACC_V3)
         list(APPEND SECDA_ACC_SUPPORT BFPP_ACC_V3)
         set(GGML_SECDA_ACC bfpp_acc_v3_driver_connector)
-        
+        if (SECDA_BFPP_ACC_V3_DRIVER_BATCHES)
+            message(STATUS "BFPP Accelerator V3 batch-capable driver (driver_batches) enabled")
+            list(APPEND SECDA_ACC_SUPPORT SECDA_DRIVER_BATCHES)
+        endif()
+
     elseif (SECDA_BFPP_ACC_V2)
         message(STATUS "BFPP Accelerator V2 enabled")
         list(APPEND GGML_CDEF_PUBLIC BFPP_ACC_V2)

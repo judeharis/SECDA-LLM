@@ -207,18 +207,26 @@ static bool DimCheck(int M, int N, int K) {
 }
 
 // m = wgt_rows, n = inp_cols, k = depth
+//
+// ne2/ne3 are the destination's batch/head extents beyond the M x N slab
+// (ggml_tensor::ne[2]/ne[3]); inp_stride2/3 and out_stride2/3 are the
+// matching byte strides (ggml_tensor::nb[2]/nb[3]). The weight (wgt) is
+// broadcast across every (b2, b3) slice, mirroring ggml_mul_mat's own
+// broadcast of src0 across src1's ne2/ne3 - only the input/output pointers
+// move between slices. A zero extent anywhere (N == 0, ne2 == 0, ne3 == 0)
+// is a legitimate no-op: the loops below simply don't execute, matching
+// what a plain C loop over zero elements would do.
 static void EntryMM(const void *wgt, const void *inp, void *out, int M, int N,
                     int K, int inp_stride, int wgt_stride, int out_stride,
-                    int wgt_type) {
+                    int wgt_type, int ne2, int ne3, int inp_stride2,
+                    int inp_stride3, int out_stride2, int out_stride3) {
 
   // Accelerator Specific Parameters
   drv->t.layer = dparams.layer;
   drv->M = M;
   drv->N = N;
   drv->K = K;
-  drv->inp = (char *)inp;
   drv->wgt = (char *)wgt;
-  drv->out = (char *)out;
   drv->inp_stride = inp_stride;
   drv->wgt_stride = wgt_stride;
   drv->out_stride = out_stride;
@@ -242,12 +250,15 @@ static void EntryMM(const void *wgt, const void *inp, void *out, int M, int N,
   drv->hwc->reset_hwc(); // Reset HWC
   prf_start(1);          // Start profiling the driver
 
-  // A zero extent (N == 0) is a legitimate no-op - e.g. llama-perplexity's
-  // logits masking can zero out every row of a call. It still needs to
-  // reach this point (rather than being skipped upstream) so the layer
-  // bookkeeping below stays in step with ggml_secda_graph_plan_create's
-  // supported_nodes count.
-  if (N > 0) bfpp_acc::MM(drv);
+  for (int b3 = 0; b3 < ne3; b3++) {
+    for (int b2 = 0; b2 < ne2; b2++) {
+      drv->inp = (char *)inp + (size_t)b3 * inp_stride3 +
+                 (size_t)b2 * inp_stride2;
+      drv->out = (char *)out + (size_t)b3 * out_stride3 +
+                 (size_t)b2 * out_stride2;
+      if (N > 0) bfpp_acc::MM(drv);
+    }
+  }
   SYSC_ON(drv->profile->saveProfile(drv->acc->profiling_vars));
   prf_end(1, a_t->driver_total); // Stop profiling the driver
 

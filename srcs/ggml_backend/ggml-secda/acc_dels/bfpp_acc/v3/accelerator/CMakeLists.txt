@@ -1,4 +1,8 @@
-add_subdirectory(driver)
+if (SECDA_BFPP_ACC_V3_DRIVER_BATCHES)
+  add_subdirectory(driver_batches)
+else()
+  add_subdirectory(driver)
+endif()
 
 if(NOT BUILD_ARM)
   message(STATUS "Building bfpp_acc_v3 for X86")

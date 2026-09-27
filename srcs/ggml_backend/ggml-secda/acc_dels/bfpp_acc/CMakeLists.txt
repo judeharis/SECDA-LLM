@@ -15,4 +15,10 @@ if (SECDA_BFPP_ACC_V3)
 message(STATUS "Adding bfpp_acc_v3 to build")
 add_subdirectory(v3)
 endif()
+
+# Jude: Added
+if (SECDA_BFPP_ACC_V4)
+message(STATUS "Adding bfpp_acc_v4 to build")
+add_subdirectory(v4)
+endif()
 message(STATUS "===================BFP ACC===================")

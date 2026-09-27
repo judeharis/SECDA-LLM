@@ -4,17 +4,17 @@
 #include "acc_config.sc.h"
 
 void BFPP_UNIT::LoadWeights() {
-  SIGWRITE(LoadWeightS, 0);
+  SIGWRITE(wgtlS, 0);
   wait();
   while (1) {
     // Load weights
-    SIGWRITE(LoadWeightS, 1);
+    SIGWRITE(wgtlS, 1);
     while (!bfpp_free.read()) wait();
     unsigned int wbs_l1 = wgt_fifo1.read().data.to_uint();
     unsigned int wbs_l2 = wgt_fifo2.read().data.to_uint();
     unsigned int wbs_l3 = wgt_fifo3.read().data.to_uint();
     unsigned int wbs_l4 = wgt_fifo4.read().data.to_uint();
-    SIGWRITE(LoadWeightS, 2);
+    SIGWRITE(wgtlS, 2);
     for (int wb = 0; wb < wbs_l1; wb += 4) {
 #pragma HLS loop_tripcount min = 8 max = 8
       weight_mapper4x(wb, wbs_l1, wbs_l2, wbs_l3, wbs_l4);
@@ -25,33 +25,31 @@ void BFPP_UNIT::LoadWeights() {
 }
 
 void BFPP_UNIT::LoadInputs() {
-  SIGWRITE(LoadInputS, 0);
+  SIGWRITE(inplS, 0);
   wait();
   while (1) {
     // Load inputs
-    SIGWRITE(LoadInputS, 1);
+    SIGWRITE(inplS, 1);
     while (!bfpp_free.read()) wait();
 
     unsigned int ibs_l = inp_fifo.read().data.to_uint();
-    SIGWRITE(LoadInputS, 2);
+    SIGWRITE(inplS, 2);
     for (int ib = 0; ib < ibs_l; ib++) {
-      SIGWRITE(LoadInputS, 3);
+      SIGWRITE(inplS, 3);
       // Fix: Weird code, why array of 2?
       int delta2[2];
       delta2[0] = inp_fifo.read().data;
       i_d[ib] = *(float *)delta2;
-      SIGWRITE(LoadInputS, 4);
-      for (int i = 0; i < 16; i++) {
-        for (int j = 0; j < 16; j += 4) {
+      SIGWRITE(inplS, 4);
+      for (int i = 0; i < 256; i += 4) {
 #pragma HLS pipeline II = 1
-          sc_uint<32> qs_y = inp_fifo.read().data.to_uint();
-          i_qs[ib][i][j + 0] = qs_y.range(7, 0);
-          i_qs[ib][i][j + 1] = qs_y.range(15, 8);
-          i_qs[ib][i][j + 2] = qs_y.range(23, 16);
-          i_qs[ib][i][j + 3] = qs_y.range(31, 24);
-        }
+        sc_uint<32> qs_y = inp_fifo.read().data.to_uint();
+        i_qs[ib][i] = qs_y.range(7, 0);
+        i_qs[ib][i + 1] = qs_y.range(15, 8);
+        i_qs[ib][i + 2] = qs_y.range(23, 16);
+        i_qs[ib][i + 3] = qs_y.range(31, 24);
       }
-      SIGWRITE(LoadInputS, 5);
+      SIGWRITE(inplS, 5);
       DWAIT(1);
       for (int i = 0; i < 16; i += 2) {
 #pragma HLS pipeline II = 1
@@ -59,7 +57,7 @@ void BFPP_UNIT::LoadInputs() {
         i_bsums[ib][i] = bsums.range(15, 0);
         i_bsums[ib][i + 1] = bsums.range(31, 16);
       }
-      SIGWRITE(LoadInputS, 6);
+      SIGWRITE(inplS, 6);
       DWAIT(1);
     }
     DWAIT(1);
@@ -71,15 +69,11 @@ void BFPP_UNIT::Compute() {
   bfpp_free.write(1);
   ADATA last = {5000, 1};
   ADATA d1 = {0, 0};
-  SIGWRITE(ComputeS, 0);
-  Shake_Reset_M(ComputeLoad);
-  Shake_Reset_M(ComputeCore);
+  SIGWRITE(computeS, 0);
   wait();
   while (1) {
-    SIGWRITE(ComputeS, 1);
-    while (!bfpp_start.read() || LoadInputS.read() != 1 ||
-           LoadWeightS.read() != 1)
-      wait();
+    SIGWRITE(computeS, 1);
+    while (!bfpp_start.read() || inplS.read() != 1 || wgtlS.read() != 1) wait();
 
     bfpp_ready.write(0);
     bfpp_free.write(0);
@@ -91,13 +85,16 @@ void BFPP_UNIT::Compute() {
     int m_idx = 0;
     int n_idx = 0;
 
-    SIGWRITE(ComputeS, 2);
+    SIGWRITE(computeS, 2);
     for (int n = 0; n < nstep; n++) {
       for (int m = 0; m < mstep; m++) {
+
         float acc_sumf = 0;
         for (int k = 0; k < kb_l; k++) {
 #pragma HLS pipeline II = 1
-          float f1 = compute_load(m_idx++, n_idx + k);
+          // Compute
+          float f1 = 0;
+          f1 = vec_dot(m_idx++, n_idx + k);
           acc_sumf += f1;
           wait();
         }
@@ -111,7 +108,7 @@ void BFPP_UNIT::Compute() {
     }
     bfpp_ready.write(1);
     bfpp_free.write(1);
-    SIGWRITE(ComputeS, 3);
+    SIGWRITE(computeS, 3);
     wait();
   }
 }

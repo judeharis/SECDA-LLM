@@ -119,26 +119,20 @@ void BFPP_UNIT::weight_mapper4x(int wb, unsigned int l1, unsigned int l2,
                                 unsigned int l3, unsigned int l4) {
   // #pragma HLS inline off
   // SIGWRITE(wgtlS, 3);
-  int wgt_ty = wgt_type.read();
+  int wgt_types = wgt_type.read();
   bool run_A = wb < l1;
   bool run_B = wb + 1 < l2;
   bool run_C = wb + 2 < l3;
   bool run_D = wb + 3 < l4;
 
-  sc_uint<2> temp_wqsA[QK_K];
-  sc_uint<2> temp_wqsB[QK_K];
-  sc_uint<2> temp_wqsC[QK_K];
-  sc_uint<2> temp_wqsD[QK_K];
-#pragma HLS array_partition variable = temp_wqsA complete
-#pragma HLS array_partition variable = temp_wqsB complete
-#pragma HLS array_partition variable = temp_wqsC complete
-#pragma HLS array_partition variable = temp_wqsD complete
+  sc_uint<2> wqs[QK_K];
+#pragma HLS array_partition variable = wqs complete
 
   // =====================================================================
   // Weight type 4 or 5
   // =====================================================================
 #if defined(BFPP_QK5) || defined(BFPP_QK4)
-  if (wgt_ty == 4 || wgt_ty == 5) {
+  if (wgt_types == 4 || wgt_types == 5) {
     sc_uint<32> sscaleA;
     sc_uint<32> sscaleB;
     sc_uint<32> sscaleC;
@@ -189,10 +183,10 @@ void BFPP_UNIT::weight_mapper4x(int wb, unsigned int l1, unsigned int l2,
     if (run_B) scale_comB = (scale3B, scale2B, scale1B);
     if (run_C) scale_comC = (scale3C, scale2C, scale1C);
     if (run_D) scale_comD = (scale3D, scale2D, scale1D);
-    if (run_A) u96_to_u6x8x2(scale_comA, &(w_scales[wb + 0][0]));
-    if (run_B) u96_to_u6x8x2(scale_comB, &(w_scales[wb + 1][0]));
-    if (run_C) u96_to_u6x8x2(scale_comC, &(w_scales[wb + 2][0]));
-    if (run_D) u96_to_u6x8x2(scale_comD, &(w_scales[wb + 3][0]));
+    if (run_A) u96_to_u6x8x2(scale_comA, &w_scales[wb][0]);
+    if (run_B) u96_to_u6x8x2(scale_comB, &w_scales[wb + 1][0]);
+    if (run_C) u96_to_u6x8x2(scale_comC, &w_scales[wb + 2][0]);
+    if (run_D) u96_to_u6x8x2(scale_comD, &w_scales[wb + 3][0]);
   }
 #endif
 
@@ -200,9 +194,9 @@ void BFPP_UNIT::weight_mapper4x(int wb, unsigned int l1, unsigned int l2,
   // Weight type 5 or 3
   // =====================================================================
 #if defined(BFPP_QK5) || defined(BFPP_QK3)
-  if (wgt_ty == 5 || wgt_ty == 3) {
+  if (wgt_types == 5 || wgt_types == 3) {
   loop_A:
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < 256; i += 32) {
 #pragma HLS pipeline II = 1
       sc_uint<32> hmaskA;
       sc_uint<32> hmaskB;
@@ -212,22 +206,12 @@ void BFPP_UNIT::weight_mapper4x(int wb, unsigned int l1, unsigned int l2,
       if (run_B) hmaskB = wgt_fifo2.read().data.to_uint();
       if (run_C) hmaskC = wgt_fifo3.read().data.to_uint();
       if (run_D) hmaskD = wgt_fifo4.read().data.to_uint();
-      for (int k = 0; k < 2; k++) {
-        for (int p = 0; p < 16; p++) {
+      for (int k = 0; k < 32; k++) {
 #pragma HLS loop unroll
-          if (run_A)
-            w_hmask[wb + 0][i * 2 + k][p] =
-                hmaskA.range(k * 16 + p, k * 16 + p);
-          if (run_B)
-            w_hmask[wb + 1][i * 2 + k][p] =
-                hmaskB.range(k * 16 + p, k * 16 + p);
-          if (run_C)
-            w_hmask[wb + 2][i * 2 + k][p] =
-                hmaskC.range(k * 16 + p, k * 16 + p);
-          if (run_D)
-            w_hmask[wb + 3][i * 2 + k][p] =
-                hmaskD.range(k * 16 + p, k * 16 + p);
-        }
+        if (run_A) w_hmask[wb][i + k] = hmaskA.range(k, k);
+        if (run_B) w_hmask[wb + 1][i + k] = hmaskB.range(k, k);
+        if (run_C) w_hmask[wb + 2][i + k] = hmaskC.range(k, k);
+        if (run_D) w_hmask[wb + 3][i + k] = hmaskD.range(k, k);
       }
     }
   }
@@ -238,76 +222,62 @@ void BFPP_UNIT::weight_mapper4x(int wb, unsigned int l1, unsigned int l2,
   // Weight type 4 or 5
   // =====================================================================
 #if defined(BFPP_QK5) || defined(BFPP_QK4)
-  if (wgt_ty == 4 || wgt_ty == 5) {
+  if (wgt_types == 4 || wgt_types == 5) {
   loop_B:
     for (int k = 0; k < 4; k++) {
 #pragma HLS pipeline II = 1
-      for (int i = 0; i < 2; i++) {
-        for (int p = 0; p < 4; p++) {
-
+      for (int i = 0; i < 8; i++) {
 #pragma HLS pipeline II = 1
-          sc_uint<32> qsA;
-          sc_uint<32> qsB;
-          sc_uint<32> qsC;
-          sc_uint<32> qsD;
-          if (run_A) qsA = wgt_fifo1.read().data.to_uint();
-          if (run_B) qsB = wgt_fifo2.read().data.to_uint();
-          if (run_C) qsC = wgt_fifo3.read().data.to_uint();
-          if (run_D) qsD = wgt_fifo4.read().data.to_uint();
+        sc_uint<32> qsA;
+        sc_uint<32> qsB;
+        sc_uint<32> qsC;
+        sc_uint<32> qsD;
+        if (run_A) qsA = wgt_fifo1.read().data.to_uint();
+        if (run_B) qsB = wgt_fifo2.read().data.to_uint();
+        if (run_C) qsC = wgt_fifo3.read().data.to_uint();
+        if (run_D) qsD = wgt_fifo4.read().data.to_uint();
 
-          for (int j = 0; j < 4; j++) {
-            // #pragma HLS unroll
-            if (run_A)
-              w_qs[wb + 0][k * 4 + i][p * 4 + j] =
-                  qsA.range(j * 8 + 1, j * 8 + 0);
-            if (run_A)
-              w_qs2[wb + 0][k * 4 + i][p * 4 + j] =
-                  qsA.range(j * 8 + 3, j * 8 + 2);
-            if (run_A)
-              w_qs[wb + 0][k * 4 + i + 2][p * 4 + j] =
-                  qsA.range(j * 8 + 5, j * 8 + 4);
-            if (run_A)
-              w_qs2[wb + 0][k * 4 + i + 2][p * 4 + j] =
-                  qsA.range(j * 8 + 7, j * 8 + 6);
-
-            if (run_B)
-              w_qs[wb + 1][k * 4 + i][p * 4 + j] =
-                  qsB.range(j * 8 + 1, j * 8 + 0);
-            if (run_B)
-              w_qs2[wb + 1][k * 4 + i][p * 4 + j] =
-                  qsB.range(j * 8 + 3, j * 8 + 2);
-            if (run_B)
-              w_qs[wb + 1][k * 4 + i + 2][p * 4 + j] =
-                  qsB.range(j * 8 + 5, j * 8 + 4);
-            if (run_B)
-              w_qs2[wb + 1][k * 4 + i + 2][p * 4 + j] =
-                  qsB.range(j * 8 + 7, j * 8 + 6);
-
-            if (run_C)
-              w_qs[wb + 2][k * 4 + i][p * 4 + j] =
-                  qsC.range(j * 8 + 1, j * 8 + 0);
-            if (run_C)
-              w_qs2[wb + 2][k * 4 + i][p * 4 + j] =
-                  qsC.range(j * 8 + 3, j * 8 + 2);
-            if (run_C)
-              w_qs[wb + 2][k * 4 + i + 2][p * 4 + j] =
-                  qsC.range(j * 8 + 5, j * 8 + 4);
-            if (run_C)
-              w_qs2[wb + 2][k * 4 + i + 2][p * 4 + j] =
-                  qsC.range(j * 8 + 7, j * 8 + 6);
-            if (run_D)
-              w_qs[wb + 3][k * 4 + i][p * 4 + j] =
-                  qsD.range(j * 8 + 1, j * 8 + 0);
-            if (run_D)
-              w_qs2[wb + 3][k * 4 + i][p * 4 + j] =
-                  qsD.range(j * 8 + 3, j * 8 + 2);
-            if (run_D)
-              w_qs[wb + 3][k * 4 + i + 2][p * 4 + j] =
-                  qsD.range(j * 8 + 5, j * 8 + 4);
-            if (run_D)
-              w_qs2[wb + 3][k * 4 + i + 2][p * 4 + j] =
-                  qsD.range(j * 8 + 7, j * 8 + 6);
-          }
+        for (int j = 0; j < 4; j++) {
+          // #pragma HLS unroll
+          if (run_A)
+            w_qs[wb][k * 64 + i * 4 + j] = qsA.range(j * 8 + 1, j * 8 + 0);
+          if (run_A)
+            w_qs2[wb][k * 64 + i * 4 + j] = qsA.range(j * 8 + 3, j * 8 + 2);
+          if (run_A)
+            w_qs[wb][k * 64 + i * 4 + j + 32] = qsA.range(j * 8 + 5, j * 8 + 4);
+          if (run_A)
+            w_qs2[wb][k * 64 + i * 4 + j + 32] =
+                qsA.range(j * 8 + 7, j * 8 + 6);
+          if (run_B)
+            w_qs[wb + 1][k * 64 + i * 4 + j] = qsB.range(j * 8 + 1, j * 8 + 0);
+          if (run_B)
+            w_qs2[wb + 1][k * 64 + i * 4 + j] = qsB.range(j * 8 + 3, j * 8 + 2);
+          if (run_B)
+            w_qs[wb + 1][k * 64 + i * 4 + j + 32] =
+                qsB.range(j * 8 + 5, j * 8 + 4);
+          if (run_B)
+            w_qs2[wb + 1][k * 64 + i * 4 + j + 32] =
+                qsB.range(j * 8 + 7, j * 8 + 6);
+          if (run_C)
+            w_qs[wb + 2][k * 64 + i * 4 + j] = qsC.range(j * 8 + 1, j * 8 + 0);
+          if (run_C)
+            w_qs2[wb + 2][k * 64 + i * 4 + j] = qsC.range(j * 8 + 3, j * 8 + 2);
+          if (run_C)
+            w_qs[wb + 2][k * 64 + i * 4 + j + 32] =
+                qsC.range(j * 8 + 5, j * 8 + 4);
+          if (run_C)
+            w_qs2[wb + 2][k * 64 + i * 4 + j + 32] =
+                qsC.range(j * 8 + 7, j * 8 + 6);
+          if (run_D)
+            w_qs[wb + 3][k * 64 + i * 4 + j] = qsD.range(j * 8 + 1, j * 8 + 0);
+          if (run_D)
+            w_qs2[wb + 3][k * 64 + i * 4 + j] = qsD.range(j * 8 + 3, j * 8 + 2);
+          if (run_D)
+            w_qs[wb + 3][k * 64 + i * 4 + j + 32] =
+                qsD.range(j * 8 + 5, j * 8 + 4);
+          if (run_D)
+            w_qs2[wb + 3][k * 64 + i * 4 + j + 32] =
+                qsD.range(j * 8 + 7, j * 8 + 6);
         }
       }
     }
@@ -319,75 +289,69 @@ void BFPP_UNIT::weight_mapper4x(int wb, unsigned int l1, unsigned int l2,
   // Weight type 6
   // =====================================================================
 #if defined(BFPP_QK6)
-  if (wgt_ty == 6) {
+  if (wgt_types == 6) {
   loop_C:
     for (int k = 0; k < 2; k++) {
 #pragma HLS pipeline II = 1
-      for (int i = 0; i < 4; i++) {
-        for (int p = 0; p < 4; p++) {
-
+      for (int i = 0; i < 16; i++) {
 #pragma HLS pipeline II = 1
-          sc_uint<32> qsA;
-          sc_uint<32> qsB;
-          sc_uint<32> qsC;
-          sc_uint<32> qsD;
-          if (run_A) qsA = wgt_fifo1.read().data.to_uint();
-          if (run_B) qsB = wgt_fifo2.read().data.to_uint();
-          if (run_C) qsC = wgt_fifo3.read().data.to_uint();
-          if (run_D) qsD = wgt_fifo4.read().data.to_uint();
+        sc_uint<32> qsA;
+        sc_uint<32> qsB;
+        sc_uint<32> qsC;
+        sc_uint<32> qsD;
+        if (run_A) qsA = wgt_fifo1.read().data.to_uint();
+        if (run_B) qsB = wgt_fifo2.read().data.to_uint();
+        if (run_C) qsC = wgt_fifo3.read().data.to_uint();
+        if (run_D) qsD = wgt_fifo4.read().data.to_uint();
 
-          for (int j = 0; j < 4; j++) {
-            // #pragma HLS unroll
-            if (run_A)
-              w_qs2[wb + 0][k * 8 + i][p * 4 + j] =
-                  qsA.range(j * 8 + 1, j * 8 + 0);
-            if (run_A)
-              w_qs3[wb + 0][k * 8 + i][p * 4 + j] =
-                  qsA.range(j * 8 + 3, j * 8 + 2);
-            if (run_A)
-              w_qs2[wb + 0][k * 8 + i + 4][p * 4 + j] =
-                  qsA.range(j * 8 + 5, j * 8 + 4);
-            if (run_A)
-              w_qs3[wb + 0][k * 8 + i + 4][p * 4 + j] =
-                  qsA.range(j * 8 + 7, j * 8 + 6);
-
-            if (run_B)
-              w_qs2[wb + 1][k * 8 + i][p * 4 + j] =
-                  qsB.range(j * 8 + 1, j * 8 + 0);
-            if (run_B)
-              w_qs3[wb + 1][k * 8 + i][p * 4 + j] =
-                  qsB.range(j * 8 + 3, j * 8 + 2);
-            if (run_B)
-              w_qs2[wb + 1][k * 8 + i + 4][p * 4 + j] =
-                  qsB.range(j * 8 + 5, j * 8 + 4);
-            if (run_B)
-              w_qs3[wb + 1][k * 8 + i + 4][p * 4 + j] =
-                  qsB.range(j * 8 + 7, j * 8 + 6);
-            if (run_C)
-              w_qs2[wb + 2][k * 8 + i][p * 4 + j] =
-                  qsC.range(j * 8 + 1, j * 8 + 0);
-            if (run_C)
-              w_qs3[wb + 2][k * 8 + i][p * 4 + j] =
-                  qsC.range(j * 8 + 3, j * 8 + 2);
-            if (run_C)
-              w_qs2[wb + 2][k * 8 + i + 4][p * 4 + j] =
-                  qsC.range(j * 8 + 5, j * 8 + 4);
-            if (run_C)
-              w_qs3[wb + 2][k * 8 + i + 4][p * 4 + j] =
-                  qsC.range(j * 8 + 7, j * 8 + 6);
-            if (run_D)
-              w_qs2[wb + 3][k * 8 + i][p * 4 + j] =
-                  qsD.range(j * 8 + 1, j * 8 + 0);
-            if (run_D)
-              w_qs3[wb + 3][k * 8 + i][p * 4 + j] =
-                  qsD.range(j * 8 + 3, j * 8 + 2);
-            if (run_D)
-              w_qs2[wb + 3][k * 8 + i + 4][p * 4 + j] =
-                  qsD.range(j * 8 + 5, j * 8 + 4);
-            if (run_D)
-              w_qs3[wb + 3][k * 8 + i + 4][p * 4 + j] =
-                  qsD.range(j * 8 + 7, j * 8 + 6);
-          }
+        for (int j = 0; j < 4; j++) {
+          // #pragma HLS unroll
+          if (run_A)
+            w_qs2[wb][k * 128 + i * 4 + j] = qsA.range(j * 8 + 1, j * 8 + 0);
+          if (run_A)
+            w_qs3[wb][k * 128 + i * 4 + j] = qsA.range(j * 8 + 3, j * 8 + 2);
+          if (run_A)
+            w_qs2[wb][k * 128 + i * 4 + j + 64] =
+                qsA.range(j * 8 + 5, j * 8 + 4);
+          if (run_A)
+            w_qs3[wb][k * 128 + i * 4 + j + 64] =
+                qsA.range(j * 8 + 7, j * 8 + 6);
+          if (run_B)
+            w_qs2[wb + 1][k * 128 + i * 4 + j] =
+                qsB.range(j * 8 + 1, j * 8 + 0);
+          if (run_B)
+            w_qs3[wb + 1][k * 128 + i * 4 + j] =
+                qsB.range(j * 8 + 3, j * 8 + 2);
+          if (run_B)
+            w_qs2[wb + 1][k * 128 + i * 4 + j + 64] =
+                qsB.range(j * 8 + 5, j * 8 + 4);
+          if (run_B)
+            w_qs3[wb + 1][k * 128 + i * 4 + j + 64] =
+                qsB.range(j * 8 + 7, j * 8 + 6);
+          if (run_C)
+            w_qs2[wb + 2][k * 128 + i * 4 + j] =
+                qsC.range(j * 8 + 1, j * 8 + 0);
+          if (run_C)
+            w_qs3[wb + 2][k * 128 + i * 4 + j] =
+                qsC.range(j * 8 + 3, j * 8 + 2);
+          if (run_C)
+            w_qs2[wb + 2][k * 128 + i * 4 + j + 64] =
+                qsC.range(j * 8 + 5, j * 8 + 4);
+          if (run_C)
+            w_qs3[wb + 2][k * 128 + i * 4 + j + 64] =
+                qsC.range(j * 8 + 7, j * 8 + 6);
+          if (run_D)
+            w_qs2[wb + 3][k * 128 + i * 4 + j] =
+                qsD.range(j * 8 + 1, j * 8 + 0);
+          if (run_D)
+            w_qs3[wb + 3][k * 128 + i * 4 + j] =
+                qsD.range(j * 8 + 3, j * 8 + 2);
+          if (run_D)
+            w_qs2[wb + 3][k * 128 + i * 4 + j + 64] =
+                qsD.range(j * 8 + 5, j * 8 + 4);
+          if (run_D)
+            w_qs3[wb + 3][k * 128 + i * 4 + j + 64] =
+                qsD.range(j * 8 + 7, j * 8 + 6);
         }
       }
     }
@@ -399,7 +363,7 @@ void BFPP_UNIT::weight_mapper4x(int wb, unsigned int l1, unsigned int l2,
   // Weight type 2
   // =====================================================================
 #if defined(BFPP_QK2)
-  if (wgt_ty == 2) {
+  if (wgt_types == 2) {
   loop_D:
     for (int i = 0; i < 16; i += 4) {
 #pragma HLS pipeline II = 1
@@ -440,10 +404,10 @@ void BFPP_UNIT::weight_mapper4x(int wb, unsigned int l1, unsigned int l2,
   // =====================================================================
 #if defined(BFPP_QK2) || defined(BFPP_QK3) || defined(BFPP_QK6)
 
-  if (wgt_ty == 2 || wgt_ty == 3 || wgt_ty == 6) {
+  if (wgt_types == 2 || wgt_types == 3 || wgt_types == 6) {
 
   loop_E:
-    for (int i = 0; i < 16; i++) {
+    for (int i = 0; i < 64; i += 4) {
 #pragma HLS pipeline II = 1
       sc_uint<32> qsA;
       sc_uint<32> qsB;
@@ -455,38 +419,10 @@ void BFPP_UNIT::weight_mapper4x(int wb, unsigned int l1, unsigned int l2,
       if (run_D) qsD = wgt_fifo4.read().data.to_uint();
       for (int j = 0; j < 16; j++) {
 #pragma HLS unroll
-        if (run_A) temp_wqsA[i * 16 + j] = qsA.range(j * 2 + 1, j * 2);
-        if (run_B) temp_wqsB[i * 16 + j] = qsB.range(j * 2 + 1, j * 2);
-        if (run_C) temp_wqsC[i * 16 + j] = qsC.range(j * 2 + 1, j * 2);
-        if (run_D) temp_wqsD[i * 16 + j] = qsD.range(j * 2 + 1, j * 2);
-        // if (run_A) w_qs[wb + 0][i][j] = qsA.range((j + 1) * 2 - 1, j * 2);
-        // if (run_B) w_qs[wb + 1][i][j] = qsB.range((j + 1) * 2 - 1, j * 2);
-        // if (run_C) w_qs[wb + 2][i][j] = qsC.range((j + 1) * 2 - 1, j * 2);
-        // if (run_D) w_qs[wb + 3][i][j] = qsD.range((j + 1) * 2 - 1, j * 2);
-      }
-    }
-
-  loop_F:
-    for (int i = 0; i < 2; i++) {
-#pragma HLS pipeline II = 1
-      for (int j = 0; j < 4; j++) {
-        for (int k = 0; k < 2; k++) {
-          for (int p = 0; p < 16; p++) {
-#pragma HLS unroll
-            if (run_A)
-              w_qs[wb + 0][i * 8 + j * 2 + k][p] =
-                  temp_wqsA[i * 128 + j + k * 64 + p * 4];
-            if (run_B)
-              w_qs[wb + 1][i * 8 + j * 2 + k][p] =
-                  temp_wqsB[i * 128 + j + k * 64 + p * 4];
-            if (run_C)
-              w_qs[wb + 2][i * 8 + j * 2 + k][p] =
-                  temp_wqsC[i * 128 + j + k * 64 + p * 4];
-            if (run_D)
-              w_qs[wb + 3][i * 8 + j * 2 + k][p] =
-                  temp_wqsD[i * 128 + j + k * 64 + p * 4];
-          }
-        }
+        if (run_A) w_qs[wb][i * 4 + j] = qsA.range((j + 1) * 2 - 1, j * 2);
+        if (run_B) w_qs[wb + 1][i * 4 + j] = qsB.range((j + 1) * 2 - 1, j * 2);
+        if (run_C) w_qs[wb + 2][i * 4 + j] = qsC.range((j + 1) * 2 - 1, j * 2);
+        if (run_D) w_qs[wb + 3][i * 4 + j] = qsD.range((j + 1) * 2 - 1, j * 2);
       }
     }
   }
@@ -498,7 +434,7 @@ void BFPP_UNIT::weight_mapper4x(int wb, unsigned int l1, unsigned int l2,
 // Weight type 6
 // =====================================================================
 #if defined(BFPP_QK6)
-  if (wgt_ty == 6) {
+  if (wgt_types == 6) {
   loop_G:
     for (int i = 0; i < 4; i++) {
 #pragma HLS pipeline II = 1
@@ -558,7 +494,7 @@ void BFPP_UNIT::weight_mapper4x(int wb, unsigned int l1, unsigned int l2,
 // Weight type 3
 // =====================================================================
 #if defined(BFPP_QK3)
-  if (wgt_ty == 3) {
+  if (wgt_types == 3) {
     sc_uint<32> scale1A;
     sc_uint<32> scale1B;
     sc_uint<32> scale1C;
@@ -617,7 +553,7 @@ void BFPP_UNIT::weight_mapper4x(int wb, unsigned int l1, unsigned int l2,
 // Weight type 2
 // =====================================================================
 #if defined(BFPP_QK2)
-  if (wgt_ty == 2) {
+  if (wgt_types == 2) {
     sc_uint<32> sscaleA;
     sc_uint<32> sscaleB;
     sc_uint<32> sscaleC;

@@ -142,9 +142,8 @@ SC_MODULE(ACCNAME) {
   HWC_CTHREAD(WeightLoader_B)
   HWC_CTHREAD(WeightLoader_C)
   HWC_CTHREAD(WeightLoader_D)
-  HWC_CTHREADSub(X1_Compute, vars.vars_0.ComputeSS);
-  HWC_CTHREADSub(X1_LoadWeight, vars.vars_0.LoadWeightSS);
-  HWC_CTHREADSub(X1_LoadInput, vars.vars_0.LoadInputSS);
+  HWC_CTHREADSub(HWC_X1_Compute,vars.vars_0.computeSS)
+
 
   void HW_MAIN() {
     wait();
@@ -164,9 +163,7 @@ SC_MODULE(ACCNAME) {
         HWC_Logic(WeightLoader_B);
         HWC_Logic(WeightLoader_C);
         HWC_Logic(WeightLoader_D);
-        HWC_Logic(X1_Compute);
-        HWC_Logic(X1_LoadWeight);
-        HWC_Logic(X1_LoadInput);
+        HWC_Logic(HWC_X1_Compute);
         DWAIT();
       }
     }
@@ -219,13 +216,7 @@ SC_MODULE(ACCNAME) {
     SC_CTHREAD(WeightLoader_D, clock);
     reset_signal_is(reset, true);
 
-    SC_CTHREAD(X1_Compute, clock);
-    reset_signal_is(reset, true);
-
-    SC_CTHREAD(X1_LoadWeight, clock);
-    reset_signal_is(reset, true);
-
-    SC_CTHREAD(X1_LoadInput, clock);
+    SC_CTHREAD(HWC_X1_Compute, clock);
     reset_signal_is(reset, true);
 
     SC_CTHREAD(HW_MAIN, clock);
@@ -240,6 +231,9 @@ CTRL_Prag(schSS);
 CTRL_Prag(wgttSS);
 CTRL_Prag(inptSS);
 
+CTRL_Prag(vars.vars_0.wgtlSS);
+CTRL_Prag(vars.vars_0.inplSS);
+
 AXI4S_In_Prag1(din1);
 AXI4S_In_Prag2(din2);
 AXI4S_In_Prag3(din3);
@@ -249,6 +243,7 @@ AXI4S_Out_Prag1(dout1);
 AXI4S_Out_Prag2(dout2);
 AXI4S_Out_Prag3(dout3);
 AXI4S_Out_Prag4(dout4);
+
 
 HWC_PragReset;
 HWC_PragGroup(Control_Unit)
@@ -263,9 +258,7 @@ HWC_PragGroup(WeightLoader_A);
 HWC_PragGroup(WeightLoader_B);
 HWC_PragGroup(WeightLoader_C);
 HWC_PragGroup(WeightLoader_D);
-HWC_PragGroup(X1_Compute);
-HWC_PragGroup(X1_LoadWeight);
-HWC_PragGroup(X1_LoadInput);
+HWC_PragGroup(HWC_X1_Compute);
     // clang-format on
   }
 };

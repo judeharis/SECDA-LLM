@@ -75,7 +75,16 @@ static ggml_backend_graph_plan_t
 ggml_secda_graph_plan_create(ggml_backend_t backend,
                              const struct ggml_cgraph *cgraph) {
 
-  if (secda_plan.planned && secda_plan.graph_uid == cgraph->uid) {
+  // cgraph->uid == 0 is ggml's default/unset sentinel (e.g. ggml_graph_view()
+  // always returns 0, since a view isn't meant to have a durable identity).
+  // Callers that evaluate ops via transient per-node views - such as
+  // test-backend-ops' node-by-node correctness comparison - therefore always
+  // present uid 0, which would otherwise make every such call after the
+  // first look like "the same graph" and incorrectly reuse stale preloaded
+  // weights from an unrelated node/tensor. Real inference is unaffected:
+  // ggml_backend_sched always assigns a genuine unique uid before dispatch.
+  if (secda_plan.planned && cgraph->uid != 0 &&
+      secda_plan.graph_uid == cgraph->uid) {
     secda_plan.plan_reused++;
     return &secda_plan;
   }
@@ -105,36 +114,44 @@ ggml_secda_graph_plan_create(ggml_backend_t backend,
     struct ggml_tensor *node = cgraph->nodes[i];
     bool node_supported = ggml_backend_supports_op(backend, node);
     if (node_supported) {
-      const struct ggml_tensor *src0 = node->src[0];
-      const struct ggml_tensor *src1 = node->src[1];
-      const enum ggml_type type = src0->type;
+      // Jude: Added - only MUL_MAT nodes have weights to preload; a SOFT_MAX
+      // node's src0/src1 are logits/mask, not weight/activation, and would
+      // be misinterpreted by the preload logic below. SOFT_MAX still
+      // occupies one shared layer slot (secda_plan.supported_nodes++;
+      // layer++; below, unconditional) so EntrySoftmax's tail bookkeeping
+      // stays in lockstep with EntryMM's.
+      if (node->op == GGML_OP_MUL_MAT) {
+        const struct ggml_tensor *src0 = node->src[0];
+        const struct ggml_tensor *src1 = node->src[1];
+        const enum ggml_type type = src0->type;
 
-      const int64_t K = src1->ne[0];
-      const int64_t M = node->ne[0];
+        const int64_t K = src1->ne[0];
+        const int64_t M = node->ne[0];
 
-      int wgt_type = 3;
-      if (type == GGML_TYPE_Q6_K) wgt_type = 6;
-      if (type == GGML_TYPE_Q5_K) wgt_type = 5;
-      if (type == GGML_TYPE_Q4_K) wgt_type = 4;
-      if (type == GGML_TYPE_Q3_K) wgt_type = 3;
-      if (type == GGML_TYPE_Q2_K) wgt_type = 2;
+        int wgt_type = 3;
+        if (type == GGML_TYPE_Q6_K) wgt_type = 6;
+        if (type == GGML_TYPE_Q5_K) wgt_type = 5;
+        if (type == GGML_TYPE_Q4_K) wgt_type = 4;
+        if (type == GGML_TYPE_Q3_K) wgt_type = 3;
+        if (type == GGML_TYPE_Q2_K) wgt_type = 2;
 
-      int64_t weight_size = 0;
-      if (wgt_type == 6) weight_size = M * (K / 256) * sizeof(block_q6_K) + 64;
-      if (wgt_type == 5) weight_size = M * (K / 256) * sizeof(block_q5_K) + 64;
-      if (wgt_type == 4) weight_size = M * (K / 256) * sizeof(block_q4_K) + 64;
-      if (wgt_type == 3) weight_size = M * (K / 256) * sizeof(block_q3_K) + 64;
-      if (wgt_type == 2) weight_size = M * (K / 256) * sizeof(block_q2_K) + 64;
+        int64_t weight_size = 0;
+        if (wgt_type == 6) weight_size = M * (K / 256) * sizeof(block_q6_K) + 64;
+        if (wgt_type == 5) weight_size = M * (K / 256) * sizeof(block_q5_K) + 64;
+        if (wgt_type == 4) weight_size = M * (K / 256) * sizeof(block_q4_K) + 64;
+        if (wgt_type == 3) weight_size = M * (K / 256) * sizeof(block_q3_K) + 64;
+        if (wgt_type == 2) weight_size = M * (K / 256) * sizeof(block_q2_K) + 64;
 
-      bool preloaded =
-          preload_weights_alloc(weight_size, layer, M, K, src0->data, wgt_type);
+        bool preloaded =
+            preload_weights_alloc(weight_size, layer, M, K, src0->data, wgt_type);
 #ifdef SECDA_LOG
-      const int64_t N = src1->ne[1];
-      plans_file << secda_plan.plan_counter << "," << layer << "," << M << ","
-                 << K << "," << N << "," << wgt_type << "," << weight_size
-                 << "," << (preloaded ? 1 : 0) << std::endl;
+        const int64_t N = src1->ne[1];
+        plans_file << secda_plan.plan_counter << "," << layer << "," << M << ","
+                   << K << "," << N << "," << wgt_type << "," << weight_size
+                   << "," << (preloaded ? 1 : 0) << std::endl;
 #endif
-      if (preloaded) secda_plan.preloaded_nodes++;
+        if (preloaded) secda_plan.preloaded_nodes++;
+      }
       secda_plan.supported_nodes++;
       layer++;
     }
@@ -179,6 +196,11 @@ static enum ggml_status ggml_secda_graph_compute(ggml_backend_t backend,
     case GGML_OP_MUL_MAT: ggml_secda_mul_mat(ctx, node); break;
 
     case GGML_OP_OUT_PROD: ggml_secda_out_prod(ctx, node); break;
+
+#if defined(BFPP_ACC_V4)
+    // Jude: Added
+    case GGML_OP_SOFT_MAX: ggml_secda_soft_max(ctx, node); break;
+#endif
 
     case GGML_OP_NONE:
     case GGML_OP_RESHAPE:
@@ -397,9 +419,55 @@ ggml_backend_secda_device_supports_op(ggml_backend_dev_t dev,
     // }
     is_supported = is_supported && dim_ok;
 
+    // Multiple independent weight slices packed into src0's ne[2]/ne[3]
+    // (e.g. MoE-style per-expert weights) are not supported: the preload
+    // cache and compute path only ever hold a single 2D weight matrix, so
+    // both driver variants silently compute wrong output for these.
+    bool s0_batched = (src0->ne[2] > 1) || (src0->ne[3] > 1);
+    is_supported = is_supported && !s0_batched;
+
+#if !defined(SECDA_DRIVER_BATCHES)
+    // The non-batch-capable driver has no ne2/ne3 loop at all - it only
+    // computes a single 2D slice, so broadcasting src0 across multiple
+    // src1/dst slices (nr != [1,1], e.g. GQA-style broadcast) silently
+    // leaves the other slices uncomputed. driver_batches handles this
+    // correctly, so only reject it here for the non-batch driver.
+    bool broadcast =
+        (src1->ne[2] != src0->ne[2]) || (src1->ne[3] != src0->ne[3]);
+    is_supported = is_supported && !broadcast;
+#endif
+
     // return false;
     return is_supported;
   }
+
+#if defined(BFPP_ACC_V4)
+  // Jude: Added - the V4 hardware softmax datapath tiles the row (see
+  // acc_softmax_unit.sc.h), so unlike MUL_MAT there is no upper bound on
+  // ne0/row width here. Gate on dtype/contiguity/mask-type only.
+  case GGML_OP_SOFT_MAX: {
+    const struct ggml_tensor *src0 = op->src[0]; // logits
+    const struct ggml_tensor *src1 = op->src[1]; // mask (optional)
+    const struct ggml_tensor *src2 = op->src[2]; // sinks (optional)
+
+    bool ok = ggml_is_contiguous(src0) && ggml_is_contiguous(op) &&
+              src0->type == GGML_TYPE_F32 && op->type == GGML_TYPE_F32;
+    if (src1) {
+      ok = ok && ggml_is_contiguous(src1) &&
+           (src1->type == GGML_TYPE_F32 || src1->type == GGML_TYPE_F16);
+    }
+    if (src2) {
+      ok = ok && src2->type == GGML_TYPE_F32;
+    }
+    // Profitability floor (docs/softmax_plan.md S5.2: "prefer CPU for tiny
+    // rows"). Left inert (>=1) for now - Stage C wants small-ne0 correctness
+    // cases exercised, not skipped; raise this later from measured
+    // crossover data.
+    const int64_t SECDA_SOFTMAX_MIN_N = 1;
+    ok = ok && src0->ne[0] >= SECDA_SOFTMAX_MIN_N;
+    return ok;
+  }
+#endif
 
   default: return false;
   }

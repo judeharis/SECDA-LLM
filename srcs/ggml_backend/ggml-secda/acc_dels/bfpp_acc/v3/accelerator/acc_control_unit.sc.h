@@ -3,6 +3,11 @@
 
 void ACCNAME::Control_Unit() {
   // clang-format off
+#ifdef __SYNTHESIS__
+  vars.vars_0.wgtlSS.write(0);
+  vars.vars_0.inplSS.write(0);
+#endif
+
   done.write(0);
   bool started = start.read();
   // clang-format on
