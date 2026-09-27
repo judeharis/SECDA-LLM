@@ -1,0 +1,14 @@
+{
+  "ne0": [32, 128, 255, 256, 257, 512, 1024, 2048, 4096],
+  "ne1": [1, 32],
+  "ne2": [1, 8, 32],
+  "ne3": [1],
+  "mask_variants": [
+    { "mask": false },
+    { "mask": true, "mask_type": "f32" },
+    { "mask": true, "mask_type": "f16" }
+  ],
+  "sinks": [false, true],
+  "scale": [0.125],
+  "max_bias": [0.0, 8.0]
+}

@@ -1,7 +1,6 @@
 #!/bin/bash
 set -eo pipefail
 
-enable_power=false
 threads=(1)
 
 BOARD_PATH="/home/ubuntu/Workspace/secda_llm"
@@ -9,10 +8,9 @@ BOARD_SUB="benchmark"
 BENCHMARK_ROOT="${BOARD_PATH}/${BOARD_SUB}"
 RESULTS_DIR_REL="../results"
 MODEL_DIR="${BOARD_PATH}/models"
-COMMANDS_FILE="${BENCHMARK_ROOT}/commands.txt"
-
-POWER_START_SCRIPT="${BENCHMARK_ROOT}/scripts/start_power_logging_KRIAv2.sh"
-POWER_STOP_SCRIPT="${BENCHMARK_ROOT}/scripts/stop_power_logging_KRIAv2.sh"
+DATASET_DIR="${BOARD_PATH}/datasets"
+DATASET_FILE="wiki.test.raw"
+COMMANDS_FILE="${BENCHMARK_ROOT}/commands_perplexity.txt"
 
 LOAD_BITSTREAM_PY="${HOME}/load_bitstream.py"
 BOARD_BITSTREAMS_DIR="${BOARD_PATH}/bitstreams"
@@ -27,22 +25,24 @@ MEMINFO_PATH="/proc/meminfo"
 DROP_CACHES_PATH="/proc/sys/vm/drop_caches"
 TRACE_FILE="sds_trace_data.dat"
 
-NUM_RUNS="${NUM_RUNS:-1}"
-TEMP="${TEMP:-0}"
-SEED="${SEED:-1712523969}"
-PROMPT="${PROMPT:-what is my name?}"
-CMD_ARG="-n ${NUM_RUNS} --single-turn --no-warmup --temp ${TEMP} -s ${SEED}"
-
-active_power_pid=""
-active_power_pid_file=""
+PPL_CHUNKS="${PPL_CHUNKS:-64}"
+PPL_BATCH="${PPL_BATCH:-16}"
+# 512 matches llama-perplexity's own built-in default (set before arg
+# parsing in perplexity.cpp), the traditional wikitext-2 PPL@ctx=512
+# convention - not the model's trained context like other llama.cpp tools.
+PPL_CTX_SIZE="${PPL_CTX_SIZE:-512}"
+# SECDA's DimCheck (acc_driver.h) rejects any MUL_MAT where
+# (ubatch_size * ceil(K/256)) > 512 (SUP_KNB), K being a layer's reduction
+# dim - each llama_decode() call is split into ubatch_size-token chunks, so
+# this is the actual per-call N the accelerator sees, not -b. For
+# tiny-llama-1.1B (ffn=5632, the largest K) that caps ubatch at ~23; 16
+# keeps headroom for larger models before this needs recomputing.
+PPL_UBATCH="${PPL_UBATCH:-16}"
+FLAGS="--no-warmup"
 
 parse_args() {
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --power)
-        enable_power=true
-        shift
-        ;;
       -t | --threads)
         IFS=',' read -r -a threads <<< "$2"
         shift 2
@@ -72,14 +72,6 @@ init_commands_log() {
   touch "${COMMANDS_FILE}"
 }
 
-stop_active_power_logger() {
-  if [[ -n "${active_power_pid}" && -x "${POWER_STOP_SCRIPT}" ]]; then
-    "${POWER_STOP_SCRIPT}" "${active_power_pid}" "${active_power_pid_file}" >/dev/null 2>&1 || true
-  fi
-  active_power_pid=""
-  active_power_pid_file=""
-}
-
 clear_bitstream() {
   echo "-----------------------------------------------------------"
   echo "Clearing Bitstream"
@@ -94,7 +86,6 @@ cleanup_temp_files() {
 error_exit() {
   local line_no="$1"
   local source_file="$2"
-  stop_active_power_logger
   echo "error at line ${line_no} in ${source_file}"
   clear_bitstream
   cleanup_temp_files
@@ -134,36 +125,11 @@ drop_caches() {
   sleep "${sleep_secs}"
 }
 
-start_power_logger() {
-  local power_log_file="$1"
-  local power_pid_file="$2"
-
-  active_power_pid=""
-  active_power_pid_file=""
-  if [[ "${enable_power}" == true ]]; then
-    if [[ -x "${POWER_START_SCRIPT}" && -x "${POWER_STOP_SCRIPT}" ]]; then
-      "${POWER_START_SCRIPT}" 0.05 "${power_log_file}" "${power_pid_file}"
-      active_power_pid=$(cat "${power_pid_file}" 2>/dev/null || true)
-      active_power_pid_file="${power_pid_file}"
-    else
-      echo "Power logger scripts not found/executable. Skipping power logging."
-    fi
-  fi
-}
-
 check_cmd_status() {
   local status="$1"
   if [[ "${status}" -ne 0 ]]; then
-    echo "Benchmark command failed with status ${status}"
+    echo "llama-perplexity command failed with status ${status}"
     exit "${status}"
-  fi
-}
-
-move_if_exists() {
-  local src="$1"
-  local dst="$2"
-  if [[ -f "${src}" ]]; then
-    mv -f "${src}" "${dst}"
   fi
 }
 
@@ -177,48 +143,45 @@ run_single_binary() {
   local tag="$7"
   local bitstream="$8"
 
-  local result_base="cli_${mn}_${thread}_${tag}"
+  local ppl_binary="${binary}_perplexity"
+  local result_base="perplexity_${mn}_${thread}_${tag}"
   local result_txt="${RESULTS_DIR_REL}/${result_base}.txt"
-  local power_log_file="${RESULTS_DIR_REL}/${result_base}_power.txt"
-  local power_pid_file="${RESULTS_DIR_REL}/${result_base}_power.pid"
+  local dataset_path="${DATASET_DIR}/${DATASET_FILE}"
 
   echo "========================================"
-  echo "Running Experiment for ${model}_${thread}_${tag}"
+  echo "Running llama-perplexity for ${model}_${thread}_${tag}"
 
-  if [[ "${acc}" == true ]]; then
-    echo "python3 ${LOAD_BITSTREAM_PY} ${BOARD_BITSTREAMS_DIR}/${bitstream}.bit" >>"${COMMANDS_FILE}"
-    python3 "${LOAD_BITSTREAM_PY}" "${BOARD_BITSTREAMS_DIR}/${bitstream}.bit"
-    drop_caches 3
+  if [[ ! -f "${dataset_path}" ]]; then
+    echo "Missing perplexity dataset: ${dataset_path} (run benchmark_suite.sh with -pp/--perplexity to sync it)"
+    exit 1
   fi
+
+  echo "python3 ${LOAD_BITSTREAM_PY} ${BOARD_BITSTREAMS_DIR}/${bitstream}.bit" >>"${COMMANDS_FILE}"
+  python3 "${LOAD_BITSTREAM_PY}" "${BOARD_BITSTREAMS_DIR}/${bitstream}.bit"
+  drop_caches 3
 
   cd "${BENCHMARK_ROOT}"
   mkdir -p results
   cd "${BENCHMARK_ROOT}/${bin_folder}"
 
-  chmod +x "./${binary}"
-
-  echo "sudo env LD_LIBRARY_PATH=\${PWD}/bin:\${LD_LIBRARY_PATH:-} ./${binary} -m ${MODEL_DIR}/${model} ${CMD_ARG} -p \"${PROMPT}\" --log-file \"${mn}_${thread}_${tag}\"" >>"${COMMANDS_FILE}"
-
-  start_power_logger "${power_log_file}" "${power_pid_file}"
-
-  local cmd_status=0
-  LD_LIBRARY_PATH="${PWD}/bin:${LD_LIBRARY_PATH:-}" "./${binary}" -m "${MODEL_DIR}/${model}" ${CMD_ARG} -p "${PROMPT}" --log-file "${mn}_${thread}_${tag}" \
-    2>&1 | tee "${result_txt}" || cmd_status=$?
-
-  stop_active_power_logger
-  check_cmd_status "${cmd_status}"
-
-  if [[ "${acc}" == true ]]; then
-    move_if_exists "prf.csv" "${RESULTS_DIR_REL}/${result_base}_prf.csv"
+  if [[ ! -x "./${ppl_binary}" ]]; then
+    echo "Missing executable: ${BENCHMARK_ROOT}/${bin_folder}/${ppl_binary}"
+    exit 1
   fi
 
-  move_if_exists "llama_perf.csv" "${RESULTS_DIR_REL}/${result_base}_llama_perf.csv"
+  echo "sudo env LD_LIBRARY_PATH=\${PWD}/bin:\${LD_LIBRARY_PATH:-} ./${ppl_binary} -m ${MODEL_DIR}/${model} -f ${dataset_path} -t ${thread} --ctx-size ${PPL_CTX_SIZE} -b ${PPL_BATCH} -ub ${PPL_UBATCH} --chunks ${PPL_CHUNKS} ${FLAGS}" >>"${COMMANDS_FILE}"
+
+  local cmd_status=0
+  LD_LIBRARY_PATH="${PWD}/bin:${LD_LIBRARY_PATH:-}" "./${ppl_binary}" -m "${MODEL_DIR}/${model}" -f "${dataset_path}" -t "${thread}" --ctx-size "${PPL_CTX_SIZE}" -b "${PPL_BATCH}" -ub "${PPL_UBATCH}" --chunks "${PPL_CHUNKS}" ${FLAGS} \
+    2>&1 | tee "${result_txt}" || cmd_status=$?
+
+  check_cmd_status "${cmd_status}"
 
   drop_caches 1
   echo "========================================"
 }
 
-run_all_experiments() {
+run_all_benchmarks() {
   local model mn thread
   for i in "${!models[@]}"; do
     model="${models[$i]}"
@@ -246,13 +209,12 @@ main() {
   init_commands_log
 
   trap 'error_exit ${LINENO} ${BASH_SOURCE[0]}' ERR
-  trap 'stop_active_power_logger' EXIT
 
-  echo "Running Experiment for Kria"
+  echo "Running llama-perplexity on FPGA"
   clear_udma
   python3 "${LOAD_BITSTREAM_PY}" "${HOST_BITSTREAMS_DIR}/${DEFAULT_BITSTREAM_FILE}"
 
-  run_all_experiments
+  run_all_benchmarks
 
   clear_bitstream
   cleanup_temp_files

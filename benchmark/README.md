@@ -20,6 +20,7 @@ It combines those values into the remote target and then runs up to three stages
 - `-b`: build and send binaries to the board
 - `-r`: copy experiment scripts and run the benchmark on the board
 - `-l` or `--llama-bench`: copy scripts and run FPGA `llama-bench` on the board
+- `-pp` or `--perplexity`: sync the wikitext-2 dataset and run FPGA `llama-perplexity` on the board
 - `-p`: fetch raw results and parse them locally
 
 If you run the script without `-b`, `-r`, or `-p`, it runs all three stages.
@@ -50,6 +51,12 @@ Only run FPGA llama-bench on the board:
 ./benchmark_suite.sh -l
 ```
 
+Only run FPGA llama-perplexity on the board:
+
+```bash
+./benchmark_suite.sh -pp
+```
+
 Only fetch and parse results:
 
 ```bash
@@ -61,6 +68,59 @@ Save a named copy of the parsed result folder:
 ```bash
 ./benchmark_suite.sh -n my_run
 ```
+
+## `llama-perplexity` (`-pp`)
+
+Unlike `llama-bench`/`llama-cli`, `llama-perplexity` runs against a real text
+corpus (`perplexity/wikitext-2-raw/wiki.test.raw`, auto-synced to
+`${board_dir}/datasets/` the first time `-pp` is used) rather than synthetic
+prompt/gen lengths, so its four tunables (`PPL_CHUNKS`, `PPL_BATCH`,
+`PPL_UBATCH`, `PPL_CTX_SIZE` env vars, see `scripts/run_llama_perplexity.sh`)
+behave differently than the equivalent `llama-bench` knobs.
+
+This runner only collects the PPL score itself — no power logging, no
+`prf.csv`, no `llama_perf.csv`. Each run writes a single
+`perplexity_<model>_<threads>_<tag>.txt` stdout capture, and
+`parse_results.py` reads the `Final estimate: PPL = X +/- Y` line straight
+out of that file into `perplexity_results.csv`.
+
+- **`PPL_CTX_SIZE` (`-c`/`--ctx-size`) affects both duration and the
+  measured PPL number, more directly than any other knob.** It sets the
+  window length each chunk covers; `llama-perplexity` only scores the
+  second half of each window (`first = n_ctx/2` in `perplexity.cpp`), so a
+  smaller context means every scored token has less preceding context to
+  condition on, which generally raises (worsens) reported PPL — "PPL at
+  ctx=512" and "PPL at ctx=2048" for the same model are not comparable
+  numbers, independent of anything SECDA-specific. Default (`512`) matches
+  `llama-perplexity`'s own built-in default, set before arg parsing at
+  `tools/perplexity/perplexity.cpp:2016` — this overrides the generic
+  llama.cpp default of "0 = model's trained context" specifically for this
+  tool, and is the traditional wikitext-2 PPL@512 benchmarking convention.
+  With `PPL_CHUNKS` fixed, duration scales ~linearly with `PPL_CTX_SIZE`
+  (each chunk does a longer forward pass). It does not affect whether SECDA
+  engages — same as `PPL_BATCH` below, only `PPL_UBATCH` controls that.
+- **`PPL_UBATCH` (`-ub`) gates whether SECDA engages at all.** SECDA's
+  `DimCheck` (`srcs/ggml_backend/ggml-secda/acc_dels/bfpp_acc/v3/accelerator/driver/acc_driver.h`)
+  rejects any `MUL_MAT` where `ubatch_size * ceil(K/256) > 512` (`K` being a
+  layer's reduction dimension) and falls back to CPU for it — since
+  `llama_decode` always splits work into `ubatch_size`-token chunks per
+  compute call, this is the real per-call `N` the accelerator sees,
+  regardless of `-b`. The default (`16`) keeps every layer of
+  `tiny-llama-1.1B` (largest `K` = 5632, the FFN down-proj) under the limit
+  (`N_max = floor(131072 / K) ≈ 23`); recompute `N_max` before adding a
+  larger model to `configs/exp_configs.sh`.
+- **`PPL_CHUNKS` affects both run duration and the measured PPL number.**
+  Each chunk is an independent, non-overlapping window of the corpus, so
+  duration scales ~linearly with chunk count, and the reported PPL (and its
+  `+/-` error bar) is an average over however much text got scored — fewer
+  chunks means a smaller sample and a noisier number, not just a faster
+  run. Keep `PPL_CHUNKS` fixed across configs being compared (it already is,
+  since it's one env var applied to every model/binary in the run).
+- **`PPL_BATCH` (`-b`) affects duration but should not affect measured
+  PPL.** It only controls how many chunks get scheduled together per
+  KV-cache-clear cycle (throughput/overhead), not which tokens get scored or
+  how their NLL is computed — `-ub`, not `-b`, determines the actual
+  per-call token count seen by SECDA's `DimCheck`.
 
 ## Configuration Notebook
 

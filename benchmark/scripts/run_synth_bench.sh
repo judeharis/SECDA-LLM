@@ -2,7 +2,7 @@
 set -eo pipefail
 
 enable_power=false
-threads=(1)
+threads=(4)
 
 BOARD_PATH="/home/ubuntu/Workspace/secda_llm"
 BOARD_SUB="benchmark"
@@ -96,7 +96,11 @@ check_cmd_status() {
 }
 
 move_if_exists() {
-  [[ -f "$1" ]] && mv -f "$1" "$2"
+  local src="$1"
+  local dst="$2"
+  if [[ -f "${src}" ]]; then
+    mv -f "${src}" "${dst}"
+  fi
 }
 
 print_test_cases() {

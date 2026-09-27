@@ -134,7 +134,12 @@ RESULT_SUFFIXES = (
     ".csv",
 )
 
-TOOL_ORDER = ("bench", "cli", "synth")
+TOOL_ORDER = ("bench", "cli", "perplexity", "synth")
+PPL_RE = re.compile(r"Final estimate: PPL = ([\d.]+) \+/- ([\d.]+)")
+PPL_SECONDS_PER_PASS_RE = re.compile(r"([\d.]+) seconds per pass")
+PPL_RUN_INFO_RE = re.compile(
+    r"calculating perplexity over (\d+) chunks, n_ctx=(\d+), batch_size=(\d+), n_seq=(\d+)"
+)
 LLAMA_DMA_METRICS = [
     "data_transfered_bytes",
     "data_transfered_recv_bytes",
@@ -386,6 +391,43 @@ def parse_llama_group(directory, root):
     return frame
 
 
+def parse_perplexity_group(directory, root):
+    # llama-perplexity results only carry the PPL score itself - no power,
+    # prf.csv, or llama_perf.csv are collected for this tool, so this reads
+    # straight from the captured stdout instead of reusing parse_llama_group.
+    txt_path = os.path.join(directory, f"{root}.txt")
+    if not os.path.exists(txt_path):
+        return None
+
+    text = Path(txt_path).read_text(encoding="utf-8", errors="replace")
+    match = PPL_RE.search(text)
+    if not match:
+        return None
+
+    row = parse_llama_metadata(root)
+    row["ppl"] = float(match.group(1))
+    row["ppl_error"] = float(match.group(2))
+
+    seconds_match = PPL_SECONDS_PER_PASS_RE.search(text)
+    row["seconds_per_pass"] = float(seconds_match.group(1)) if seconds_match else 0.0
+
+    info_match = PPL_RUN_INFO_RE.search(text)
+    if info_match:
+        row["chunks"] = int(info_match.group(1))
+        row["n_ctx"] = int(info_match.group(2))
+        row["batch_size"] = int(info_match.group(3))
+        row["n_seq"] = int(info_match.group(4))
+    else:
+        row["chunks"] = 0
+        row["n_ctx"] = 0
+        row["batch_size"] = 0
+        row["n_seq"] = 0
+
+    frame = pd.DataFrame([row])
+    frame = frame.rename(columns={"hw": "Hardware", "model": "Model"})
+    return frame
+
+
 def parse_synth_group(directory, root):
     tbo_path = first_existing_path(directory, [f"{root}_tbo.csv"])
     if not tbo_path:
@@ -496,6 +538,37 @@ def sort_llama_frame(frame):
     return frame[ordered_columns]
 
 
+def sort_perplexity_frame(frame):
+    if frame.empty:
+        return frame
+
+    sort_columns = [column for column in ["Model", "Hardware", "opt"] if column in frame.columns]
+    if sort_columns:
+        frame = frame.sort_values(by=sort_columns)
+
+    preferred = [
+        "tool",
+        "run_name",
+        "Model",
+        "Hardware",
+        "ppl",
+        "ppl_error",
+        "seconds_per_pass",
+        "chunks",
+        "n_ctx",
+        "batch_size",
+        "n_seq",
+        "threads",
+        "board",
+        "version",
+        "opt",
+    ]
+    ordered_columns = [column for column in preferred if column in frame.columns]
+    ordered_columns.extend(column for column in frame.columns if column not in ordered_columns)
+
+    return frame[ordered_columns]
+
+
 def sort_synth_frame(frame):
     if frame.empty:
         return frame
@@ -566,6 +639,10 @@ def main():
                 frame = parse_llama_group(directory, root)
                 if frame is not None:
                     tool_rows.append(frame)
+            elif tool == "perplexity":
+                frame = parse_perplexity_group(directory, root)
+                if frame is not None:
+                    tool_rows.append(frame)
             elif tool == "synth":
                 frame = parse_synth_group(directory, root)
                 if frame is not None:
@@ -577,6 +654,8 @@ def main():
         combined = pd.concat(tool_rows, ignore_index=True, sort=False)
         if tool in {"bench", "cli"}:
             combined = sort_llama_frame(combined)
+        elif tool == "perplexity":
+            combined = sort_perplexity_frame(combined)
         else:
             combined = sort_synth_frame(combined)
         tool_frames[tool] = combined

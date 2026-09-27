@@ -1,0 +1,18 @@
+{
+    "bfpbp.q3v1.0A": {
+        "bitstreams": "BFPB_Q3_v1",
+        "binaries": "llama_cli_v1A_secda_q3",
+        "acc_tag": "BFPB_KRIA_v1.0A_q3",
+        "bins": "bin_bfpb_q3",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK3=ON -DSECDA_BFPP_ACC_V3=ON"
+    },
+    "bfps.q3v1.0A": {
+        "bitstreams": "BFPS_Q3_v1",
+        "binaries": "llama_cli_v1A_secda_q3",
+        "acc_tag": "BFPS_KRIA_v1.0A_q3",
+        "bins": "bin_bfps_q3",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK3=ON -DSECDA_BFPP_ACC_V4=ON"
+    }
+}

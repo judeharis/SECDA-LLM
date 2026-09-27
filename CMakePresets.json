@@ -144,6 +144,34 @@
       }
     },
     {
+      "name": "SECDA-sim-x64-batches",
+      "displayName": "SECDA-sim-x64-batches",
+      "inherits": [ "SECDA-sim-x64" ],
+      "cacheVariables": {
+        "SECDA_BFPP_ACC_V3_DRIVER_BATCHES": "ON"
+      }
+    },
+    {
+      "name": "SECDA-sim-x64-v4",
+      "displayName": "SECDA-sim-x64-v4",
+      "inherits": [ "secda-llm-base" ],
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "GGML_SECDA": "ON",
+        "BUILD_ARM": "OFF",
+        "SECDA_QK2": "ON",
+        "SECDA_QK3": "ON",
+        "SECDA_QK4": "ON",
+        "SECDA_QK5": "ON",
+        "SECDA_QK6": "ON",
+        "SECDA_BFPP_ACC_V4": "ON",
+        "ACC_PRELOAD": "ON",
+        "GGML_PERF": "ON"
+      }
+    },
+    {
       "name": "SECDA-armv7-debug",
       "displayName": "SECDA-armv7-debug",
       "inherits": [ "secda-llm-base" ],
@@ -192,6 +220,14 @@
       "configurePreset": "SECDA-sim-x64"
     },
     {
+      "name": "SECDA-sim-x64-batches",
+      "configurePreset": "SECDA-sim-x64-batches"
+    },
+    {
+      "name": "SECDA-sim-x64-v4",
+      "configurePreset": "SECDA-sim-x64-v4"
+    },
+    {
       "name": "SECDA-armv7-debug",
       "configurePreset": "SECDA-armv7-debug"
     },
@@ -227,6 +263,16 @@
     {
       "name": "SECDA-sim-x64",
       "configurePreset": "SECDA-sim-x64",
+      "inherits": [ "test-base" ]
+    },
+    {
+      "name": "SECDA-sim-x64-batches",
+      "configurePreset": "SECDA-sim-x64-batches",
+      "inherits": [ "test-base" ]
+    },
+    {
+      "name": "SECDA-sim-x64-v4",
+      "configurePreset": "SECDA-sim-x64-v4",
       "inherits": [ "test-base" ]
     },
     {

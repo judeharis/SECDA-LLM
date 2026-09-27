@@ -27,11 +27,24 @@ MEMINFO_PATH="/proc/meminfo"
 DROP_CACHES_PATH="/proc/sys/vm/drop_caches"
 TRACE_FILE="sds_trace_data.dat"
 
+# BENCH_N="${BENCH_N:-0}"
+# BENCH_P="${BENCH_P:-0}"
+# BENCH_B="${BENCH_B:-16}"
+# BENCH_PG="${BENCH_PG:-32,32}"
+# FLAGS="--no-warmup -r 5"
+
 BENCH_N="${BENCH_N:-0}"
 BENCH_P="${BENCH_P:-0}"
-BENCH_B="${BENCH_B:-8}"
-BENCH_PG="${BENCH_PG:-32,8}"
+BENCH_B="${BENCH_B:-16}"
+BENCH_PG="${BENCH_PG:-128,256}"
 FLAGS="--no-warmup -r 1"
+
+
+# BENCH_N="${BENCH_N:-0}"
+# BENCH_P="${BENCH_P:-0}"
+# BENCH_B="${BENCH_B:-16}"
+# BENCH_PG="${BENCH_PG:-16,4}"
+# FLAGS="--no-warmup -r 1"
 
 active_power_pid=""
 active_power_pid_file=""
@@ -162,7 +175,9 @@ check_cmd_status() {
 move_if_exists() {
   local src="$1"
   local dst="$2"
-  [[ -f "${src}" ]] && mv -f "${src}" "${dst}"
+  if [[ -f "${src}" ]]; then
+    mv -f "${src}" "${dst}"
+  fi
 }
 
 run_single_binary() {
@@ -211,6 +226,7 @@ run_single_binary() {
   move_if_exists "prf.csv" "${RESULTS_DIR_REL}/${result_base}_prf.csv"
   move_if_exists "llama_perf.csv" "${RESULTS_DIR_REL}/${result_base}_llama_perf.csv"
   move_if_exists "llama-bench.csv" "${RESULTS_DIR_REL}/${result_base}_llama-bench.csv"
+  move_if_exists "_gstats/graph_stats.csv" "${RESULTS_DIR_REL}/${result_base}_graph_stats.csv"
 
   drop_caches 1
   echo "========================================"

@@ -21,6 +21,7 @@ board_sub="benchmark"
 declare -A BENCHMARKS=(
   [llama-cli]="run_llama_cli.sh"
   [llama-bench]="run_llama_bench.sh"
+  [llama-perplexity]="run_llama_perplexity.sh"
   [synth-bench]="run_synth_bench.sh"
 )
 
@@ -60,6 +61,7 @@ Options:
   -b, --compile       Compile and send binaries to board
   -c, --cli           Run llama-cli
   -l, --llama-bench   Run llama-bench
+  -pp, --perplexity   Run llama-perplexity
   -s, --synth-bench   Run synth benchmark (test-backend-ops)
   -p, --parse         Parse and fetch results
   -po, --power        Enable power logging during benchmark runs (default: on)
@@ -91,6 +93,12 @@ sync_support_scripts() {
   ssh -p "$port" "$board_addr" "mkdir -p '${board_dir}/${board_sub}/scripts'"
   rsync -avz -e "ssh -p $port" "${script_dir}/scripts/start_power_logging_KRIAv2.sh" "$board_addr":"${board_dir}/${board_sub}/scripts/"
   rsync -avz -e "ssh -p $port" "${script_dir}/scripts/stop_power_logging_KRIAv2.sh" "$board_addr":"${board_dir}/${board_sub}/scripts/"
+}
+
+sync_perplexity_dataset() {
+  log_stage "Syncing perplexity dataset to board ${board_addr}"
+  ssh -p "$port" "$board_addr" "mkdir -p '${board_dir}/datasets'"
+  rsync -avz -e "ssh -p $port" "${repo_root}/perplexity/wikitext-2-raw/wiki.test.raw" "$board_addr":"${board_dir}/datasets/"
 }
 
 send_and_run_benchmark() {
@@ -155,7 +163,7 @@ print_summary() {
 ========== Timing Summary ==========
 EOF
   
-  for stage in compile run llama-bench synth-bench parse; do
+  for stage in compile run llama-bench llama-perplexity synth-bench parse; do
     local time_val="${stage_times[$stage]}"
     [[ -z "$time_val" ]] && time_val="skipped"
     printf "  %-15s: %s\n" "$stage" "$time_val"
@@ -174,6 +182,7 @@ Timestamp:   $time_stamp
 Compile:     ${stage_times[compile]:-skipped}s
 Run:         ${stage_times[run]:-skipped}s
 Llama-Bench: ${stage_times[llama-bench]:-skipped}s
+Llama-Perplexity: ${stage_times[llama-perplexity]:-skipped}s
 Synth-Bench: ${stage_times[synth-bench]:-skipped}s
 Parse:       ${stage_times[parse]:-skipped}s
 Total:       $1s
@@ -196,7 +205,7 @@ EOF
 
 main() {
   local total_start=$SECONDS
-  local do_compile=0 do_cli=0 do_llama_bench=0 do_synth_bench=0 do_parse=0 do_power=1 mode_selected=0
+  local do_compile=0 do_cli=0 do_llama_bench=0 do_llama_perplexity=0 do_synth_bench=0 do_parse=0 do_power=1 mode_selected=0
   local threads_value=""
 
   while [[ $# -gt 0 ]]; do
@@ -217,6 +226,11 @@ main() {
         ;;
       -l | --llama-bench)
         do_llama_bench=1
+        mode_selected=1
+        shift
+        ;;
+      -pp | --perplexity)
+        do_llama_perplexity=1
         mode_selected=1
         shift
         ;;
@@ -303,6 +317,16 @@ main() {
     stage_times[llama-bench]=$((SECONDS - step_start))
   else
     log_stage "Skipping llama-bench"
+  fi
+
+  # Run llama-perplexity
+  if [[ $do_llama_perplexity -eq 1 ]]; then
+    sync_perplexity_dataset
+    local step_start=$SECONDS
+    send_and_run_benchmark "llama-perplexity" ${thread_flag}
+    stage_times[llama-perplexity]=$((SECONDS - step_start))
+  else
+    log_stage "Skipping llama-perplexity"
   fi
 
   # Run synth-bench
