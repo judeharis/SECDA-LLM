@@ -1,0 +1,20 @@
+{
+  "hardware": {
+    "BFPP_ACCv3_0_KRIA": {
+      "acc_name": "BFPP_ACC_KRIA",
+      "acc_version": 3,
+      "acc_sub_version": 0,
+      "acc_src": "bfpp_acc/v3/accelerator",
+      "acc_link_folder": "bfpp_acc_src_v3",
+      "hlx_tcl_script": "KRIA/KRIA_dma_4_hp_4_ctrl_hwc.tcl",
+      "top": "BFP_Acc",
+      "del": "bfpp_acc",
+      "del_version": "3",
+      "hls_clock": "5",
+      "hlx_Mhz": "200",
+      "axi_bitW": "32",
+      "axi_burstS": "32",
+      "board": "KRIA"
+    }
+  }
+}
