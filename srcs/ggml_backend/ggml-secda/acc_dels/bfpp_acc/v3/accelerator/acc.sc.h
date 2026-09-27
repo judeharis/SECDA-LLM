@@ -129,7 +129,6 @@ SC_MODULE(ACCNAME) {
   // HWC
   // ================================================= //
 
-  HWC_Reset;
   HWC_CTHREAD(Control_Unit)
   HWC_CTHREAD(Load_Unit)
   HWC_CTHREAD(Store_Unit)
@@ -143,6 +142,9 @@ SC_MODULE(ACCNAME) {
   HWC_CTHREAD(WeightLoader_C)
   HWC_CTHREAD(WeightLoader_D)
   HWC_CTHREADSub(HWC_X1_Compute,vars.vars_0.computeSS)
+  // Declared after the monitors: HLS maps the hwc bundle in port order,
+  // and SECDA-Core hwc_ctrl expects hwc_reset after the last monitor.
+  HWC_Reset;
 
 
   void HW_MAIN() {
