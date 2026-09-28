@@ -16,3 +16,9 @@ hardware_automation/acc_srcs/
 hardware_automation/bitstreams/**/*.bit
 hardware_automation/bitstreams/**/*.hwh
 bazel-*
+# Run outputs of the SECDA tools and backend (any directory)
+llama_perf.csv
+tbo.csv
+prf.csv
+_gstats/
+_plans/

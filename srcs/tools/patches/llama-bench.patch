@@ -1,0 +1,32 @@
+--- a/tools/llama-bench/llama-bench.cpp
++++ b/tools/llama-bench/llama-bench.cpp
+@@ -26,6 +26,9 @@
+ #include "fit.h"
+ #include "ggml.h"
+ #include "llama.h"
++// Jude: Added - llama_perf.csv for SECDA-LLM's benchmark pipeline
++#include "secda_perf_csv.h"
++// Jude: Added end
+ 
+ #ifdef _WIN32
+ #    define WIN32_LEAN_AND_MEAN
+@@ -2236,6 +2239,9 @@
+         }
+         auto mparams = inst.to_llama_mparams();
+         auto cparams = inst.to_llama_cparams();
++        // Jude: Added - performance counters, for llama_perf.csv
++        cparams.no_perf = false;
++        // Jude: Added end
+ 
+         bool do_fit = inst.fit_target != cmd_params_defaults.fit_params_target[0] ||
+                       inst.fit_min_ctx != cmd_params_defaults.fit_params_min_ctx[0];
+@@ -2434,6 +2440,9 @@
+         }
+ 
+         llama_perf_context_print(ctx);
++        // Jude: Added
++        secda_write_llama_perf_csv(ctx);
++        // Jude: Added end
+ 
+         llama_free(ctx);
+ 

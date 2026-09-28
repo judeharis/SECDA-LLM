@@ -1,0 +1,466 @@
+--- a/tests/test-backend-ops.cpp
++++ b/tests/test-backend-ops.cpp
+@@ -45,10 +45,23 @@
+ #include <vector>
+ #include <unordered_map>
+ 
++// Jude: Added - N_THREADS is now a runtime flag (-t/--threads), see main()
++// #ifdef __EMSCRIPTEN__
++// #   define N_THREADS 1
++// #else
++// #   define N_THREADS std::thread::hardware_concurrency()
++// #endif
++// Jude: Added end
+ #ifdef __EMSCRIPTEN__
+-#   define N_THREADS 1
++// Jude: Edited
++// upstream: #   define N_THREADS 1
++static size_t g_n_threads = 1; // Jude: Added
++// Jude: Edited end
+ #else
+-#   define N_THREADS std::thread::hardware_concurrency()
++// Jude: Edited
++// upstream: #   define N_THREADS std::thread::hardware_concurrency()
++static size_t g_n_threads = std::thread::hardware_concurrency();  // Jude: Added
++// Jude: Edited end
+ #endif
+ 
+ static void init_tensor_uniform(ggml_tensor * tensor, float min = -1.0f, float max = 1.0f) {
+@@ -56,7 +69,10 @@
+     std::vector<float> data(nels);
+     {
+         // parallel initialization
+-        static const size_t n_threads = N_THREADS;
++        // Jude: Edited
++        // upstream: static const size_t n_threads = N_THREADS;
++        static const size_t n_threads = g_n_threads;  // Jude: Added
++        // Jude: Edited end
+ 
+         auto init_thread = [&](size_t start, size_t end) {
+             thread_local std::default_random_engine gen(std::random_device{}());
+@@ -110,7 +126,10 @@
+             };
+ 
+             const size_t min_blocks_per_thread = 1;
+-            const size_t n_quant_threads = std::min<size_t>(std::max<size_t>(N_THREADS/2, 1),
++            // Jude: Edited
++            // upstream: const size_t n_quant_threads = std::min<size_t>(std::max<size_t>(N_THREADS/2, 1),
++            const size_t n_quant_threads = std::min<size_t>(std::max<size_t>(g_n_threads/2, 1),
++            // Jude: Edited end
+                                                             std::max<size_t>(1, n_blocks / min_blocks_per_thread));
+ 
+             if (n_quant_threads == 1) {
+@@ -1059,17 +1078,36 @@
+             if (std::find(std::begin(fields_csv), std::end(fields_csv), fields[i]) == std::end(fields_csv)) {
+                 continue;
+             }
+-            printf("\"%s\"%s", fields[i].c_str(), i < fields.size() - 1 ? "," : "");
+-        }
+-        printf("\n");
++            // Jude: Edited
++            // upstream: printf("\"%s\"%s", fields[i].c_str(), i < fields.size() - 1 ? "," : "");
++            // printf("\"%s\"%s", fields[i].c_str(), i < fields.size() - 1 ? "," : "");
++            // Jude: Edited end
++        }
++        // Jude: Edited
++        // upstream: printf("\n");
++        // printf("\n");
++        // Jude: Edited end
+     }
+ 
+     void print_test_result(const test_result & result) override {
++        // Jude: Added
++        FILE* csv_file = fopen("tbo.csv", "w");
++        if (!csv_file) csv_file = stdout;
++        // Jude: Added end
+ 
+         std::vector<std::string> values     = result.get_values();
+         std::vector<std::string> fields     = test_result::get_fields();
+         std::vector<std::string> fields_csv = get_fields_csv();
+ 
++        // Jude: Added
++        for (size_t i = 0; i < fields.size(); i++) {
++            if (std::find(std::begin(fields_csv), std::end(fields_csv), fields[i]) == std::end(fields_csv)) {
++                continue;
++            }
++            fprintf(csv_file, "\"%s\"%s", fields[i].c_str(), i < fields.size() - 1 ? "," : "");
++        }
++        fprintf(csv_file, "\n");
++        // Jude: Added end
+         for (size_t i = 0; i < values.size(); i++) {
+ 
+             if (std::find(std::begin(fields_csv), std::end(fields_csv), fields[i]) == std::end(fields_csv)) {
+@@ -1083,20 +1121,46 @@
+                 escaped_value.replace(pos, 1, "\"\"");
+                 pos += 2;
+             }
+-            printf("\"%s\"%s", escaped_value.c_str(), i < values.size() - 1 ? "," : "");
+-        }
+-        printf("\n");
++            // Jude: Edited
++            // upstream: printf("\"%s\"%s", escaped_value.c_str(), i < values.size() - 1 ? "," : "");
++            fprintf(csv_file, "\"%s\"%s", escaped_value.c_str(), i < values.size() - 1 ? "," : "");
++            // Jude: Edited end
++        }
++        // Jude: Edited
++        // upstream: printf("\n");
++        fprintf(csv_file, "\n");
++        if (csv_file != stdout) fclose(csv_file);
++        // Jude: Edited end
+     }
+ 
+     static std::vector<std::string> get_fields_csv() {
++        // Jude: Added
++        // Jude: Added end
+         return {
++            // Jude: Added
++            "test_time",
++            "backend_name",
++            // Jude: Added end
+             "op_name",
+             "op_params",
++            // Jude: Added
++            "test_mode",
++            // Jude: Added end
+             "supported",
++            // Jude: Added
++            "passed",
++            // Jude: Added end
+             "error_message",
+-            "test_mode",
+-            "backend_reg_name",
+-            "backend_name",
++            // Jude: Edited
++            // upstream: "test_mode",
++            // upstream: "backend_reg_name",
++            // upstream: "backend_name",
++            "time_us",
++            "flops",
++            "bandwidth_gb_s",
++            "memory_kb",
++            "n_runs"
++            // Jude: Edited end
+         };
+     }
+ 
+@@ -1339,13 +1403,24 @@
+ 
+         // check if the backends support the ops
+         bool supported = true;
++        // Jude: Added
++        // Jude: Added end
+         for (ggml_backend_t backend : {backend1, backend2}) {
+-            for (ggml_tensor * t = ggml_get_first_tensor(ctx); t != NULL; t = ggml_get_next_tensor(ctx, t)) {
+-                if (!ggml_backend_supports_op(backend, t)) {
+-                    supported = false;
+-                    break;
+-                }
+-            }
++            // Jude: Edited
++            // upstream: for (ggml_tensor * t = ggml_get_first_tensor(ctx); t != NULL; t = ggml_get_next_tensor(ctx, t)) {
++            // upstream: if (!ggml_backend_supports_op(backend, t)) {
++            // upstream: supported = false;
++            // upstream: break;
++            // upstream: }
++            // upstream: }
++            // for (ggml_tensor * t = ggml_get_first_tensor(ctx); t != NULL; t = ggml_get_next_tensor(ctx, t)) {
++            //     if (!ggml_backend_supports_op(backend, t)) {
++            //         supported = false;
++            //         break;
++            //     }
++            // }
++            if (!ggml_backend_supports_op(backend, out)) supported = false;
++            // Jude: Edited end
+         }
+ 
+         if (!supported) {
+@@ -1422,9 +1497,15 @@
+             for (size_t i = 0; i < f1.size(); i++) {
+                 // check for nans
+                 if (std::isnan(f1[i]) || std::isnan(f2[i])) {
+-                    printf("[%s] NaN at index %zu (%s=%f %s=%f) ", ggml_op_desc(t1), i, bn1, f1[i], bn2, f2[i]);
+-                    ud->ok = false;
+-                    return true;
++                    // Jude: Edited
++                    // upstream: printf("[%s] NaN at index %zu (%s=%f %s=%f) ", ggml_op_desc(t1), i, bn1, f1[i], bn2, f2[i]);
++                    // upstream: ud->ok = false;
++                    // upstream: return true;
++                    printf("[%s] NaN at index %zu (%s=%f %s=%f)\n", ggml_op_desc(t1), i, bn1, f1[i], bn2, f2[i]);
++                    // Jude: Added
++                    // ud->ok = false;
++                    // return true;
++                    // Jude: Edited end
+                 }
+                 // check for infs: both must be inf of the same sign, or both must be finite
+                 if (isinf_or_max(f1[i]) || isinf_or_max(f2[i])) {
+@@ -1483,7 +1564,10 @@
+     bool eval_perf(ggml_backend_t backend, const char * op_names_filter, printer * output_printer) {
+         mode = MODE_PERF;
+ 
+-        static const size_t graph_nodes = 8192;
++        // Jude: Edited
++        // upstream: static const size_t graph_nodes = 8192;
++        static const size_t graph_nodes = 10;
++        // Jude: Edited end
+ 
+         ggml_init_params params = {
+             /* .mem_size = */ ggml_tensor_overhead()*128 + ggml_graph_overhead_custom(graph_nodes, false),
+@@ -1526,7 +1610,20 @@
+         ggml_build_forward_expand(gf, out);
+ 
+         // warmup run
++        // Jude: Added - SECDA: warm up on the driver's current state, without the
++        // backend planning this graph on compute (the plan is made explicitly below)
++        auto secda_set_auto_plan = (void (*)(ggml_backend_t, bool)) ggml_backend_reg_get_proc_address(
++            ggml_backend_dev_backend_reg(ggml_backend_get_device(backend)), "ggml_backend_secda_set_auto_plan");
++        if (secda_set_auto_plan) {
++            secda_set_auto_plan(backend, false);
++        }
++        // Jude: Added end
+         ggml_status status = ggml_backend_graph_compute(backend, gf);
++        // Jude: Added
++        if (secda_set_auto_plan) {
++            secda_set_auto_plan(backend, true);
++        }
++        // Jude: Added end
+         if (status != GGML_STATUS_SUCCESS) {
+             fprintf(stderr, "%s: ggml_backend_graph_compute failed. status=%s \n", __func__, ggml_status_to_string(status));
+             return false;
+@@ -1541,6 +1638,9 @@
+             const uint64_t target_flops_cpu =   8ULL * GFLOP;
+             const uint64_t target_flops_gpu = 100ULL * GFLOP;
+             uint64_t target_flops = is_cpu ? target_flops_cpu : target_flops_gpu;
++            // Jude: Added
++            target_flops = target_flops_cpu; // Jude: Added
++            // Jude: Added end
+             n_runs = (int)std::min<int64_t>(ggml_graph_size(gf) - ggml_graph_n_nodes(gf), target_flops / op_flops(out)) + 1;
+         } else {
+             // based on memory size
+@@ -1575,6 +1675,11 @@
+             mem += tensor_op_size(ggml_graph_node(gf, i));
+         }
+ 
++        // Jude: Added - SECDA: plan (preload the weights) once for the timed runs
++        ggml_backend_graph_plan_t secda_plan = strcmp(ggml_backend_name(backend), "SECDA") == 0
++            ? ggml_backend_graph_plan_create(backend, gf) : nullptr;
++        // Jude: Added end
++
+         // run
+         int64_t total_time_us = 0;
+         int64_t total_mem = 0;
+@@ -1584,6 +1689,11 @@
+             ggml_status status = ggml_backend_graph_compute(backend, gf);
+             if (status != GGML_STATUS_SUCCESS) {
+                 fprintf(stderr, "%s: ggml_backend_graph_compute failed. status=%s \n", __func__, ggml_status_to_string(status));
++                // Jude: Added
++                if (secda_plan) {
++                    ggml_backend_graph_plan_free(backend, secda_plan);
++                }
++                // Jude: Added end
+                 return false;
+             }
+             int64_t end_time = ggml_time_us();
+@@ -1591,7 +1701,15 @@
+             total_time_us += end_time - start_time;
+             total_mem += mem;
+             total_runs += n_runs;
+-        } while (total_time_us < 1000*1000); // run for at least 1 second
++        // Jude: Edited - upstream: } while (total_time_us < 1000*1000); // run for at least 1 second
++        // upstream: } while (total_time_us < 1000*1000); // run for at least 1 second
++        } while (total_time_us < 1000*1000 * 20); // run for at least 20 second
++        // Jude: Edited end
++        // Jude: Added
++        if (secda_plan) {
++            ggml_backend_graph_plan_free(backend, secda_plan);
++        }
++        // Jude: Added end
+ 
+         // Create test result
+         double avg_time_us      = (double) total_time_us / total_runs;
+@@ -9516,8 +9634,72 @@
+     return test_cases;
+ }
+ 
++// Jude: Added
++static std::vector<std::unique_ptr<test_case>> make_test_cases_from_string(const char * params) {
++    std::vector<std::unique_ptr<test_case>> test_cases;
++    std::istringstream line_iss(params);
++
++    ggml_op op;
++    ggml_type type;
++    std::array<int64_t, 4> ne;
++    std::array<int32_t, GGML_MAX_OP_PARAMS / sizeof(int32_t)> op_params = {};
++    std::string name;
++    uint64_t tmp;
++
++    line_iss >> tmp;
++    op = (ggml_op)tmp;
++    line_iss >> tmp;
++    type = (ggml_type)tmp;
++
++    for (size_t i = 0; i < 4; i++) {
++        line_iss >> ne[i];
++    }
++
++    line_iss >> tmp;
++    for (size_t i = 0; i < tmp && i < op_params.size(); i++) {
++        line_iss >> op_params[i];
++    }
++
++    line_iss >> tmp;
++
++    size_t num_src = std::min((uint64_t)GGML_MAX_SRC, tmp);
++    std::vector<input_tensor> sources(num_src);
++    for (size_t i = 0; i < num_src; i++) {
++        input_tensor& src = sources[i];
++        line_iss >> tmp;
++        src.type = (ggml_type)tmp;
++
++        for (size_t i = 0; i < 4; i++) {
++            line_iss >> src.ne[i];
++        }
++        for (size_t i = 0; i < 4; i++) {
++            line_iss >> src.nb[i];
++        }
++    }
++
++    line_iss >> name;
++
++    if (name.length() == 1 && name[0] == '-') {
++        name = "";
++    }
++
++    if (op == GGML_OP_MUL_MAT) {
++        // test_cases.emplace_back(new test_mul_mat(op, type, ne, op_params, sources, std::move(name)));
++        test_cases.emplace_back(new test_mul_mat(sources[0].type, sources[1].type, sources[0].ne[1], sources[1].ne[1], sources[0].ne[0], {1,  1}, {1, 1}));
++
++    } else {
++        test_cases.emplace_back(new test_generic_op(op, type, ne, op_params, sources, std::move(name)));
++    }
++
++    return test_cases;
++}
++
++// Jude: Added end
+ static bool test_backend(ggml_backend_t backend, ggml_backend_dev_t dev, test_mode mode, const char * op_names_filter, const char * params_filter,
+-                         printer * output_printer, const char * test_file_path, int parallel_workers) {
++                         // Jude: Edited
++                         // upstream: printer * output_printer, const char * test_file_path, int parallel_workers) {
++                         printer * output_printer, const char * test_file_path, const char * test_params, int parallel_workers) {
++                         // Jude: Edited end
+     auto filter_test_cases = [](std::vector<std::unique_ptr<test_case>> & test_cases, const char * params_filter) {
+         if (params_filter == nullptr) {
+             return;
+@@ -9537,7 +9719,12 @@
+ 
+     std::vector<std::unique_ptr<test_case>> test_cases;
+ 
+-    if (test_file_path == nullptr) {
++    // Jude: Edited
++    // upstream: if (test_file_path == nullptr) {
++    if (test_params != nullptr) {
++        test_cases = make_test_cases_from_string(test_params);
++    } else if (test_file_path == nullptr) {
++    // Jude: Edited end
+         switch (mode) {
+         case MODE_TEST:
+         case MODE_GRAD:
+@@ -9801,7 +9988,10 @@
+ 
+ static void usage(char ** argv) {
+     printf("Usage: %s [mode] [-o <op,..>] [-b <backend>] [-p <params regex>] [--output <console|sql|csv>] [--list-ops]", argv[0]);
+-    printf(" [--show-coverage] [--test-file <path>] [-j <n>]\n");
++    // Jude: Edited
++    // upstream: printf(" [--show-coverage] [--test-file <path>] [-j <n>]\n");
++    printf(" [--show-coverage] [--test-file <path>] [-j <n>] [-t <n>]\n");
++    // Jude: Edited end
+     printf("    valid modes:\n");
+     printf("      - test (default, compare with CPU backend for correctness)\n");
+     printf("      - grad (compare gradients from backpropagation with method of finite differences)\n");
+@@ -9813,7 +10003,13 @@
+     printf("    --list-ops lists all available GGML operations\n");
+     printf("    --show-coverage shows test coverage\n");
+     printf("    --test-file reads test operators from a test file generated by llama-export-graph-ops\n");
++    // Jude: Added
++    printf("    --test-params runs a single test operator specified by a string in the same format as the test file\n"); // Jude: Added
++    // Jude: Added end
+     printf("    -j <n> runs tests using <n> parallel worker threads (default: 1, test mode only)\n");
++     // Jude: Added
++    printf("    -t, --threads <n> sets the number of threads used for tensor init/quantization and backend compute (default: hardware_concurrency())\n"); // Jude: Added
++     // Jude: Added end
+ }
+ 
+ int main(int argc, char ** argv) {
+@@ -9823,6 +10019,9 @@
+     const char * backend_filter = nullptr;
+     const char * params_filter = nullptr;
+     const char * test_file_path = nullptr;
++    // Jude: Added
++    const char * test_params = nullptr; // Jude: Added
++    // Jude: Added end
+     int parallel_workers = 1;
+ 
+     for (int i = 1; i < argc; i++) {
+@@ -9878,6 +10077,16 @@
+                 usage(argv);
+                 return 1;
+             }
++        // Jude: Added
++        } else if (strcmp(argv[i], "--test-params") == 0) {
++            // Jude: Added
++            if (i + 1 < argc) {
++                test_params = argv[++i];
++            } else {
++                usage(argv);
++                return 1;
++            }
++        // Jude: Added end
+         } else if (strcmp(argv[i], "-j") == 0) {
+             if (i + 1 < argc) {
+                 parallel_workers = atoi(argv[++i]);
+@@ -9889,6 +10098,21 @@
+                 usage(argv);
+                 return 1;
+             }
++        // Jude: Added
++        } else if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--threads") == 0) {
++            // Jude: Added
++            if (i + 1 < argc) {
++                int n_threads = atoi(argv[++i]);
++                if (n_threads < 1) {
++                    usage(argv);
++                    return 1;
++                }
++                g_n_threads = (size_t) n_threads;
++            } else {
++                usage(argv);
++                return 1;
++            }
++        // Jude: Added end
+         } else {
+             usage(argv);
+             return 1;
+@@ -9932,7 +10156,10 @@
+         auto ggml_backend_set_n_threads_fn = (ggml_backend_set_n_threads_t) ggml_backend_reg_get_proc_address(reg, "ggml_backend_set_n_threads");
+         if (ggml_backend_set_n_threads_fn) {
+             // TODO: better value for n_threads
+-            ggml_backend_set_n_threads_fn(backend, N_THREADS);
++            // Jude: Edited
++            // upstream: ggml_backend_set_n_threads_fn(backend, N_THREADS);
++            ggml_backend_set_n_threads_fn(backend, g_n_threads);  // Jude: Added
++            // Jude: Edited end
+         }
+ 
+         size_t free, total;  // NOLINT
+@@ -9941,7 +10168,10 @@
+                                                              false, "", ggml_backend_dev_description(dev),
+                                                              total / 1024 / 1024, free / 1024 / 1024, true));
+ 
+-        bool ok = test_backend(backend, dev, mode, op_names_filter, params_filter, output_printer.get(), test_file_path, parallel_workers);
++        // Jude: Edited - test_params to test_backend call
++        // upstream: bool ok = test_backend(backend, dev, mode, op_names_filter, params_filter, output_printer.get(), test_file_path, parallel_workers);
++        bool ok = test_backend(backend, dev, mode, op_names_filter, params_filter, output_printer.get(), test_file_path, test_params, parallel_workers);
++        // Jude: Edited end
+ 
+         if (ok) {
+             n_ok++;

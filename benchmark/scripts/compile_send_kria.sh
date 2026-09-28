@@ -113,14 +113,18 @@ do_build_and_send() {
   local preload_flag="$4" # optional 4th arg for preload build
 
   cmake --fresh "-DCMAKE_INSTALL_PREFIX=${workspace_path}/out/install/Kria_SECDA/${remote_subdir}/"  ${preload_flag} ${cmake_flags} -DCMAKE_SYSTEM_PROCESSOR=aarch64 -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_C_COMPILER=/usr/bin/aarch64-linux-gnu-gcc -DCMAKE_CXX_COMPILER=/usr/bin/aarch64-linux-gnu-g++ -DCMAKE_BUILD_TYPE=Release -DSECDA_ACC_PROFILE=ON -DBUILD_ARM=ON -DBUILD_KRIA=ON -DGGML_SECDA=ON -S"${workspace_path}" "-B${workspace_path}/out/build/Kria_SECDA/${remote_subdir}"
-  cmake --build "${workspace_path}/out/build/Kria_SECDA/${remote_subdir}" --parallel 26 --target llama-cli --
-  cmake --build "${workspace_path}/out/build/Kria_SECDA/${remote_subdir}" --parallel 26 --target test-backend-ops --
-  cmake --build "${workspace_path}/out/build/Kria_SECDA/${remote_subdir}" --parallel 26 --target llama-bench --
+  cmake --build "${workspace_path}/out/build/Kria_SECDA/${remote_subdir}" --parallel 26 --target secda-llama-cli --
+  cmake --build "${workspace_path}/out/build/Kria_SECDA/${remote_subdir}" --parallel 26 --target secda-test-backend-ops --
+  cmake --build "${workspace_path}/out/build/Kria_SECDA/${remote_subdir}" --parallel 26 --target secda-llama-bench --
   cmake --build "${workspace_path}/out/build/Kria_SECDA/${remote_subdir}" --parallel 26 --target llama-perplexity --
   ssh -p "${port}" "${board_addr}" "mkdir -p /${board_path}/$board_sub/${remote_subdir}"
-  rsync -r -avz -e "ssh -p ${port}" "${workspace_path}/out/build/Kria_SECDA/${remote_subdir}/bin/llama-cli" "${board_addr}:/${board_path}/$board_sub/${remote_subdir}/${remote_exe_name}"
-  rsync -r -avz -e "ssh -p ${port}" "${workspace_path}/out/build/Kria_SECDA/${remote_subdir}/bin/test-backend-ops" "${board_addr}:/${board_path}/$board_sub/${remote_subdir}/${remote_exe_name}_tbo"
-  rsync -r -avz -e "ssh -p ${port}" "${workspace_path}/out/build/Kria_SECDA/${remote_subdir}/bin/llama-bench" "${board_addr}:/${board_path}/$board_sub/${remote_subdir}/${remote_exe_name}_bench"
+  # SECDA tool variants (srcs/tools): deployed under the names the run scripts use.
+  for b in secda-llama-cli secda-test-backend-ops secda-llama-bench; do
+    [ -x "${workspace_path}/out/build/Kria_SECDA/${remote_subdir}/bin/$b" ] || { echo "[compile_send_kria] missing $b"; exit 1; }
+  done
+  rsync -r -avz -e "ssh -p ${port}" "${workspace_path}/out/build/Kria_SECDA/${remote_subdir}/bin/secda-llama-cli" "${board_addr}:/${board_path}/$board_sub/${remote_subdir}/${remote_exe_name}"
+  rsync -r -avz -e "ssh -p ${port}" "${workspace_path}/out/build/Kria_SECDA/${remote_subdir}/bin/secda-test-backend-ops" "${board_addr}:/${board_path}/$board_sub/${remote_subdir}/${remote_exe_name}_tbo"
+  rsync -r -avz -e "ssh -p ${port}" "${workspace_path}/out/build/Kria_SECDA/${remote_subdir}/bin/secda-llama-bench" "${board_addr}:/${board_path}/$board_sub/${remote_subdir}/${remote_exe_name}_bench"
   rsync -r -avz -e "ssh -p ${port}" "${workspace_path}/out/build/Kria_SECDA/${remote_subdir}/bin/llama-perplexity" "${board_addr}:/${board_path}/$board_sub/${remote_subdir}/${remote_exe_name}_perplexity"
   rsync -r -avz -e "ssh -p ${port}" "${workspace_path}/out/build/Kria_SECDA/${remote_subdir}/bin/" "${board_addr}:/${board_path}/$board_sub/${remote_subdir}/"
 }
@@ -133,14 +137,18 @@ do_build_and_send_cpu() {
 
 # -DGGML_PERF=ON -
   cmake --fresh "-DCMAKE_INSTALL_PREFIX=${workspace_path}/out/install/Kria_CPU/${remote_subdir}/" ${cmake_flags} -DCMAKE_SYSTEM_PROCESSOR=aarch64 -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_C_COMPILER=/usr/bin/aarch64-linux-gnu-gcc -DCMAKE_CXX_COMPILER=/usr/bin/aarch64-linux-gnu-g++ -DCMAKE_BUILD_TYPE=Release -DBUILD_ARM=ON -DBUILD_KRIA=ON -S"${workspace_path}" "-B${workspace_path}/out/build/Kria_CPU/${remote_subdir}"
-  cmake --build "${workspace_path}/out/build/Kria_CPU/${remote_subdir}" --parallel 26 --target llama-cli --
-  cmake --build "${workspace_path}/out/build/Kria_CPU/${remote_subdir}" --parallel 26 --target test-backend-ops --
-  cmake --build "${workspace_path}/out/build/Kria_CPU/${remote_subdir}" --parallel 26 --target llama-bench --
+  cmake --build "${workspace_path}/out/build/Kria_CPU/${remote_subdir}" --parallel 26 --target secda-llama-cli --
+  cmake --build "${workspace_path}/out/build/Kria_CPU/${remote_subdir}" --parallel 26 --target secda-test-backend-ops --
+  cmake --build "${workspace_path}/out/build/Kria_CPU/${remote_subdir}" --parallel 26 --target secda-llama-bench --
   cmake --build "${workspace_path}/out/build/Kria_CPU/${remote_subdir}" --parallel 26 --target llama-perplexity --
   ssh -p "${port}" "${board_addr}" "mkdir -p /${board_path}/$board_sub/${remote_subdir}"
-  rsync -r -avz -e "ssh -p ${port}" "${workspace_path}/out/build/Kria_CPU/${remote_subdir}/bin/llama-cli" "${board_addr}:/${board_path}/$board_sub/${remote_subdir}/${remote_exe_name}"
-  rsync -r -avz -e "ssh -p ${port}" "${workspace_path}/out/build/Kria_CPU/${remote_subdir}/bin/test-backend-ops" "${board_addr}:/${board_path}/$board_sub/${remote_subdir}/${remote_exe_name}_tbo"
-  rsync -r -avz -e "ssh -p ${port}" "${workspace_path}/out/build/Kria_CPU/${remote_subdir}/bin/llama-bench" "${board_addr}:/${board_path}/$board_sub/${remote_subdir}/${remote_exe_name}_bench"
+  # SECDA tool variants (srcs/tools): deployed under the names the run scripts use.
+  for b in secda-llama-cli secda-test-backend-ops secda-llama-bench; do
+    [ -x "${workspace_path}/out/build/Kria_CPU/${remote_subdir}/bin/$b" ] || { echo "[compile_send_kria] missing $b"; exit 1; }
+  done
+  rsync -r -avz -e "ssh -p ${port}" "${workspace_path}/out/build/Kria_CPU/${remote_subdir}/bin/secda-llama-cli" "${board_addr}:/${board_path}/$board_sub/${remote_subdir}/${remote_exe_name}"
+  rsync -r -avz -e "ssh -p ${port}" "${workspace_path}/out/build/Kria_CPU/${remote_subdir}/bin/secda-test-backend-ops" "${board_addr}:/${board_path}/$board_sub/${remote_subdir}/${remote_exe_name}_tbo"
+  rsync -r -avz -e "ssh -p ${port}" "${workspace_path}/out/build/Kria_CPU/${remote_subdir}/bin/secda-llama-bench" "${board_addr}:/${board_path}/$board_sub/${remote_subdir}/${remote_exe_name}_bench"
   rsync -r -avz -e "ssh -p ${port}" "${workspace_path}/out/build/Kria_CPU/${remote_subdir}/bin/llama-perplexity" "${board_addr}:/${board_path}/$board_sub/${remote_subdir}/${remote_exe_name}_perplexity"
   rsync -r -avz -e "ssh -p ${port}" "${workspace_path}/out/build/Kria_CPU/${remote_subdir}/bin/" "${board_addr}:/${board_path}/$board_sub/${remote_subdir}/"
 }

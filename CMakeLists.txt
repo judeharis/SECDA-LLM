@@ -36,6 +36,7 @@ endif()
 
 option(SECDA_LLM_ENABLE_SECDA "Enable the SECDA ggml backend" ON)
 option(SECDA_LLM_BUILD_SECDA_CORE "Build the SECDA-Core submodule when SECDA is enabled" ON)
+option(SECDA_LLM_BUILD_TOOLS "Build the SECDA variants of test-backend-ops, llama-bench and llama-cli (srcs/tools)" ON)
 
 secda_llm_set_default(CMAKE_BUILD_TYPE STRING Release "Build type")
 secda_llm_set_default(LLAMA_BUILD_COMMON BOOL ON "Build llama.cpp common utilities")
@@ -55,6 +56,7 @@ if (SECDA_LLM_ENABLE_SECDA)
 			"GGML_SECDA is enabled, but the SECDA backend is not linked into llama.cpp. "
 			"Run ./setup.sh from the repository root and re-configure.")
 	endif()
+
 
 	if (NOT EXISTS "${SECDA_LLM_LLAMA_DIR}/ggml/include/ggml-secda.h")
 		message(FATAL_ERROR
@@ -83,3 +85,8 @@ endif()
 list(PREPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 add_subdirectory("${SECDA_LLM_LLAMA_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/llama.cpp")
+
+if (SECDA_LLM_BUILD_TOOLS)
+	# Built from the pinned llama.cpp's sources plus srcs/tools/patches/*.patch.
+	add_subdirectory(srcs/tools "${CMAKE_CURRENT_BINARY_DIR}/secda_tools")
+endif()

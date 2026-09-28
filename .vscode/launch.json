@@ -49,7 +49,7 @@
             "type": "cppdbg",
             "request": "launch",
             "preLaunchTask": "Build llama-bench (SECDA-nosim-x64)",
-            "program": "${workspaceFolder}/out/build/SECDA-nosim-x64/bin/llama-bench",
+            "program": "${workspaceFolder}/out/build/SECDA-nosim-x64/bin/secda-llama-bench",
             "args": [
                 "-m",
                 "./models/secda_models/Cryptography_GPT_2_v1.0.0.Q2_K.gguf",
@@ -190,7 +190,7 @@
             "type": "cppdbg",
             "request": "launch",
             "preLaunchTask": "Build test-backend-ops (SECDA-nosim-x64)",
-            "program": "${workspaceFolder}/out/build/SECDA-nosim-x64/bin/test-backend-ops",
+            "program": "${workspaceFolder}/out/build/SECDA-nosim-x64/bin/secda-test-backend-ops",
             "args": [
                 "perf",
                 "-b",
@@ -267,7 +267,7 @@
             "type": "cppdbg",
             "request": "launch",
             "preLaunchTask": "Build llama-bench (SECDA-sim-x64)",
-            "program": "${workspaceFolder}/out/build/SECDA-sim-x64/bin/llama-bench",
+            "program": "${workspaceFolder}/out/build/SECDA-sim-x64/bin/secda-llama-bench",
             "args": [
                 "-m",
                 "./models/secda_models/Cryptography_GPT_2_v1.0.0.Q2_K.gguf",
@@ -409,7 +409,7 @@
             "type": "cppdbg",
             "request": "launch",
             "preLaunchTask": "Build test-backend-ops (SECDA-sim-x64)",
-            "program": "${workspaceFolder}/out/build/SECDA-sim-x64/bin/test-backend-ops",
+            "program": "${workspaceFolder}/out/build/SECDA-sim-x64/bin/secda-test-backend-ops",
             "args": [
                 "test",
                 "-b",

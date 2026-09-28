@@ -1,0 +1,23 @@
+--- a/tools/cli/cli.cpp
++++ b/tools/cli/cli.cpp
+@@ -16,6 +16,9 @@
+ #include <fstream>
+ #include <thread>
+ #include <signal.h>
++// Jude: Added - llama_perf.csv for SECDA-LLM's benchmark pipeline
++#include "secda_perf_csv.h"
++// Jude: Added end
+ 
+ #if defined(_WIN32)
+ #define WIN32_LEAN_AND_MEAN
+@@ -629,6 +632,10 @@
+         });
+         console::log("\n");
+ 
++        // Jude: Added - performance summary, and llama_perf.csv
++        llama_perf_context_print(ctx_cli.ctx_server.get_llama_context());
++        secda_write_llama_perf_csv(ctx_cli.ctx_server.get_llama_context());
++        // Jude: Added end
+         if (params.show_timings) {
+             console::set_display(DISPLAY_TYPE_INFO);
+             console::log("\n");
