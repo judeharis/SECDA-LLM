@@ -162,11 +162,11 @@ unchanged upstream tools. `SECDA_LLM_BUILD_TOOLS=OFF` skips them.
 | `secda-llama-bench` | `tools/llama-bench` + `llama-bench.patch` | writes `llama_perf.csv` |
 | `secda-llama-cli` | `tools/cli` + `cli.patch` | prints the perf summary and writes `llama_perf.csv` |
 
-`secda-test-backend-ops` also passes more than upstream's does. A NaN in the output
-is printed (`NaN at index ...`) but no longer fails the case, and the NaN error then
-passes the error check too. Support is checked on the `out` node only, and a perf
-run lasts at least 20 s instead of 1 s. When you read a pass count from it, also
-check the log for `NaN at index` lines.
+`secda-test-backend-ops` differs from upstream's in a few more ways. Support is
+checked on the `out` node only, and a perf run lasts at least 20 s instead of 1 s.
+A NaN in the output fails the case, as upstream, and is printed as
+`NaN at index ...`. `SECDA_TBO_NAN_PASS=1` restores the owner's older behaviour,
+where a NaN was printed but passed.
 
 **Checks used for the v6 migration.** Run them from a scratch directory: the
 backend and the tools write `prf.csv`, `secda_profile.json`, `llama_perf.csv` and
@@ -175,22 +175,22 @@ backend and the tools write `prf.csv`, `secda_profile.json`, `llama_perf.csv` an
 
 ```bash
 B=<SECDA-LLM>/out/build/SECDA-sim-x64/bin
-git -C <SECDA-LLM>/llama.cpp show 06938ac12:README.md | head -c 4096 > ppl_input.txt
 $B/secda-test-backend-ops -b SECDA -o MUL_MAT          # v4: also -o SOFT_MAX
-$B/llama-perplexity -m MobileLLM-125M-HF.Q2_K.gguf -f ppl_input.txt -c 128 --chunks 2 -t 1 -b 128
-$B/llama-perplexity -m MobileLLM-125M-HF.Q2_K.gguf -f ppl_input.txt -c 128 --chunks 2 -t 1 -b 16 -ub 16
+$B/llama-perplexity -m MobileLLM-125M-HF.Q2_K.gguf -f <SECDA-LLM>/perplexity/ppl_input.txt -c 128 --chunks 2 -t 1 -b 128
+$B/llama-perplexity -m MobileLLM-125M-HF.Q2_K.gguf -f <SECDA-LLM>/perplexity/ppl_input.txt -c 128 --chunks 2 -t 1 -b 16 -ub 16
 ```
 
-The perplexity input is the first 4096 bytes of llama.cpp's `README.md` at
-`06938ac12` (md5 `b6d844ba5fc667529f6efd3cf3cdd204`), not
-`perplexity/wikitext-2-raw`. That input gave the recorded 3.3449 +/- 0.59780
+The perplexity input, `perplexity/ppl_input.txt`, is the first 4096 bytes of
+llama.cpp's `README.md` at `06938ac12` (md5 `b6d844ba5fc667529f6efd3cf3cdd204`),
+not `perplexity/wikitext-2-raw`. That input gave the recorded 3.3449 +/- 0.59780
 (simulation and x86 CPU) and 3.3625 +/- 0.60376 (KV260).
 
 The `-b 128` run mostly exercises the CPU. The driver's size check
 (`N x kb <= SUP_KNB`, 512) accepts only 1 of the 30 MUL_MAT nodes per chunk, and the
-rest run on the CPU. The `-b 16 -ub 16` run puts all 30 on SECDA: 3.3429 +/- 0.59671
-in simulation, for every design variant. The KV260 has only the `-b 128` value so
-far. Beyond perplexity, the accelerator's end-to-end coverage comes from
+rest run on the CPU. The `-b 16 -ub 16` run puts all 30 on SECDA, for every design
+variant: 3.3429 +/- 0.59671 in simulation (x86 CPU-only: 3.3637) and 3.3636 +/-
+0.60469 on the KV260 (board CPU-only: 3.3596). Simulation and board are not
+numerically equivalent at `-b 16`; see STATUS.md. Beyond perplexity, the accelerator's end-to-end coverage comes from
 `secda-llama-cli`, which plans 30/30 MUL_MAT nodes on SECDA, and from
 `secda-test-backend-ops`.
 

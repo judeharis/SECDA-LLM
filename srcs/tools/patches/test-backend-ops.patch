@@ -181,13 +181,13 @@
 -                    printf("[%s] NaN at index %zu (%s=%f %s=%f) ", ggml_op_desc(t1), i, bn1, f1[i], bn2, f2[i]);
 -                    ud->ok = false;
 -                    return true;
-+                    // Jude: Edited
++                    // Jude: Edited - a NaN fails the case, as upstream; SECDA_TBO_NAN_PASS=1 keeps the old pass
 +                    // upstream: printf("[%s] NaN at index %zu (%s=%f %s=%f) ", ggml_op_desc(t1), i, bn1, f1[i], bn2, f2[i]);
-+                    // upstream: ud->ok = false;
-+                    // upstream: return true;
 +                    printf("[%s] NaN at index %zu (%s=%f %s=%f)\n", ggml_op_desc(t1), i, bn1, f1[i], bn2, f2[i]);
-+                    // ud->ok = false;
-+                    // return true;
++                    if (!getenv("SECDA_TBO_NAN_PASS")) {
++                        ud->ok = false;
++                        return true;
++                    }
 +                    // Jude: Edited end
                  }
                  // check for infs: both must be inf of the same sign, or both must be finite

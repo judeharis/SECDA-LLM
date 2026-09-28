@@ -17,16 +17,18 @@ SECDA-Core's flow. On `kriaB_L`:
 - `secda-llama-cli` runs all 30 MUL_MAT nodes on the accelerator, and its greedy
   text is identical to simulation's.
 
-The board perplexity run also matches the board's CPU-only build. At `-b 128`,
-though, it puts only 1 of the 30 MUL_MAT nodes per chunk on SECDA, so it is weak
-evidence. The simulation gate suite also ran `-b 16 -ub 16`, which puts all 30 on
-SECDA. That run has not been done on the board.
+Perplexity at `-b 16 -ub 16`, with all 30 MUL_MATs on SECDA, gives 3.3636 on the
+board, within 0.12% of the board's CPU-only 3.3596. At `-b 128` only 1 of the 30
+runs on SECDA. Simulation at `-b 16` gives 3.3429, 0.6% below the x86 CPU's 3.3637,
+so simulation and board are not numerically equivalent; the cause is open
+([TODO.md](TODO.md) 1.5). With `-fa off`, v4's SOFT_MAX offload produces garbage
+text (TODO 2.2).
 
 **The llama.cpp fork is down to backend registration:** 3 files and 17 lines
 over upstream `06938ac12`.
 
-**All the work is committed** on `v3_core_upgrade_wip`. GitHub has it up to
-`fa22f3a`. The last two commits, `6b5c410` and `6727d25`, are still local. The
+**All the work is committed and pushed** on `v3_core_upgrade_wip`
+(GitHub at `ce9d85c` on 2026-09-28). The
 previous checkpoint's risks are closed: the work was untracked, had no remote copy,
 and v3 was mid-restructure.
 
@@ -36,7 +38,7 @@ and v3 was mid-restructure.
 
 | Area | State |
 |---|---|
-| Branch | `v3_core_upgrade_wip` at `6727d25`. `git ls-remote` on 2026-09-28 showed `origin` at `fa22f3a`. `v3_core_upgrade` (`a9b6ab5`) and `main` (`183376a`) have not moved; both are ancestors of the WIP branch. |
+| Branch | `v3_core_upgrade_wip`, pushed (`origin` at `ce9d85c` on 2026-09-28). `v3_core_upgrade` (`a9b6ab5`) and `main` (`183376a`) have not moved; both are ancestors of the WIP branch. |
 | bfpp_acc v3 (`driver`, `driver_batches`) | On axi_support v6, with `HWC_Reset` declared after the 13 monitors. `BFPP_ACCv3_0_KRIA` is built at 200 MHz, timing-tolerated (WNS -0.307 ns, 6.1%), and `verified_accurate` on the KV260. `secda_profile.json` names all 13 counters, but the driver sets target states only for monitors 0-4, so only those have meaningful totals. |
 | bfpp_acc v4 (v3 plus a SOFT_MAX unit) | The same. `BFPP_ACCv4_0_KRIA` is timing-tolerated (WNS -0.217 ns, 4.3%). 14 named counters; targets are set for 0-4 and 13 (`Softmax_Unit`). |
 | legacy v1, v2 | Retired to `acc_dels/bfpp_acc/legacy/` (`9c6758f`). Still axi_support v5 and not built; configure refuses them. `v3/accelerator_alt` was dropped. |
@@ -81,7 +83,8 @@ All records are dated 2026-09-28 and kept in each design's `test_status.json`
     gives 3.3449 because CPU-op rounding differs between ARM and x86). At `-b 128`
     the driver's size check (`N x kb <= SUP_KNB`, 512) accepts only 1 of the 30
     MUL_MAT nodes per chunk, so this mostly compares CPU with CPU. The
-    `-b 16 -ub 16` run (3.3429 in simulation) was not run on the board;
+    `-b 16 -ub 16` run puts all 30 on SECDA: 3.3636 +/- 0.60469 in all four
+    variants, against 3.3596 for the board CPU (see `test_status.json`);
   - `llama-cli` generated text identical to simulation, with 30/30 MUL_MAT nodes
     on SECDA and preloaded. The token check is against simulation, not against
     the board's CPU. The board's CPU-only build diverges from both at the first
@@ -107,6 +110,8 @@ verification detail is in SECDA-DS `docs/secda-llm-migration-plan.md` and
 ---
 
 ## Open items
+
+The actionable follow-ups are in [TODO.md](TODO.md).
 
 - **Pushbullet tokens.** `benchmark/benchmark_suite.sh` hard-codes a token. It has
   been in history since `4769480` (2026-06-03) and is already on `origin/main`. A
@@ -152,18 +157,13 @@ verification detail is in SECDA-DS `docs/secda-llm-migration-plan.md` and
   - **Root.** The suite starts the run scripts over ssh as `board_user` (`ubuntu`)
     without sudo. The scripts load bitstreams, write `/dev/u-dma-buf-mgr` and run
     the binaries without sudo, so they need root.
-- **Board perplexity coverage.** Run perplexity at `-b 16 -ub 16` on the board,
-  which puts the MUL_MATs on SECDA, and compare it with simulation's 3.3429 +/-
-  0.59671. At `-b 128` only 1 of the 30 MUL_MAT nodes per chunk does. The
-  simulation value is in the gate suite, not in `test_status.json`.
-- **The perplexity input is not in the repo.** It was
-  `/tmp/llm_baseline/ppl_input.txt`: the first 4096 bytes of llama.cpp
-  `README.md` at `06938ac12`, md5 `b6d844ba5fc667529f6efd3cf3cdd204`. The README
-  shows how to regenerate it. Either add it as a file or re-baseline on
-  `perplexity/wikitext-2-raw`.
-- **NaN-passes semantics in `secda-test-backend-ops`.** A NaN output doesn't fail a
-  case (minimal-fork spec §6 flags it for a second look). Decide whether to keep
-  it. Until then, check pass counts for `NaN at index` lines.
+- **Simulation and board differ numerically at `-b 16`.** Perplexity with all 30
+  MUL_MATs on SECDA: board 3.3636 (board CPU 3.3596), simulation 3.3429 (x86 CPU
+  3.3637). The board's accelerator tracks its CPU; simulation doesn't track x86.
+  TODO 1.5.
+- **v4 SOFT_MAX with `-fa off` is broken end to end.** Garbage text in both
+  drivers, with no desync warning (the tile-map shift, TODO 2.2). The model runs
+  only avoid it because auto flash-attention removes SOFT_MAX.
 - **Bitstreams are not tracked.** The migration plan's Phase 4 said to track
   `hardware_automation/bitstreams/KRIA/*.bit`/`.hwh`, plus the KV260 CPU reset
   bitstream, as SECDA-Sandboxed does.
@@ -190,7 +190,8 @@ verification detail is in SECDA-DS `docs/secda-llm-migration-plan.md` and
 
 ## Next session
 
-1. Push `6b5c410`, `6727d25` and this docs update.
+1. Work through [TODO.md](TODO.md): 1.5 (simulation vs board numerics) and 2.2
+   (v4 SOFT_MAX with `-fa off`) first.
 2. Rotate the Pushbullet tokens.
 3. Decide which branch carries the work. SECDA-DS's `CLAUDE.md` names
    `v3_core_upgrade`, but the work is on `v3_core_upgrade_wip`.
@@ -208,6 +209,7 @@ verification detail is in SECDA-DS `docs/secda-llm-migration-plan.md` and
 | Path | Role |
 |---|---|
 | [README.md](README.md) | Layout, setup, presets, KV260 flow and fork policy |
+| [TODO.md](TODO.md) | Follow-up work from the migration, by priority |
 | `srcs/ggml_backend/ggml-secda/` | The backend, including `secda_planner.{h,cpp}` |
 | `srcs/ggml_backend/ggml-secda/acc_dels/bfpp_acc/{v3,v4}/` | The designs, `hw_params.json`, `test_status.json`, `CHANGES.md` |
 | `srcs/tools/` | The `secda-*` tools: patches and `refresh_patch.sh` |
