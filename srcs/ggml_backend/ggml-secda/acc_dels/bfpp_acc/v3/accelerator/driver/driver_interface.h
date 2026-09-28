@@ -26,6 +26,10 @@ void updateProfile(std::chrono::nanoseconds time) {
 
 bool modelPlanned() { return drv->m.planned; }
 
+// The layer (planner's MUL_MAT ordinal) of the next EntryMM call; -1 when the
+// plan doesn't cover it, which sends the weights with the call.
+void setLayer(int layer) { dparams.layer = layer; }
+
 static bool preloadWeights(unsigned wgt_size, int layer, int M, int K,
                            const void *wgt, int wgt_type) {
   if (drv->t.alloc_allowed == false) return false;
@@ -120,10 +124,7 @@ static bool preloadWeights(unsigned wgt_size, int layer, int M, int K,
       tile_map_C[i] = std::make_tuple(curr_offset_C, bytes_per_tile_C);
       tile_map_D[i] = std::make_tuple(curr_offset_D, bytes_per_tile_D);
     }
-    drv->t.tile_offset_map_A.push_back(tile_map_A);
-    drv->t.tile_offset_map_B.push_back(tile_map_B);
-    drv->t.tile_offset_map_C.push_back(tile_map_C);
-    drv->t.tile_offset_map_D.push_back(tile_map_D);
+    drv->t.set_tile_maps(layer, tile_map_A, tile_map_B, tile_map_C, tile_map_D);
   }
   drv->mdma->dmas[0].dma_sync_mem();
   drv->mdma->dmas[1].dma_sync_mem();

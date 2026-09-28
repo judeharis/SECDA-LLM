@@ -38,6 +38,9 @@ void updatePlan_T(int supported_nodes);
 
 bool modelPlanned_T();
 
+// The layer of the next MUL_MAT (the planner's MUL_MAT ordinal, -1 if unplanned).
+void setLayer_T(int layer);
+
 bool preload_weights_alloc(unsigned wgt_size, int layer, int M, int K,
                     const void *wgt, int wgt_type);
 

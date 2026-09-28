@@ -161,7 +161,7 @@ void MM(acc_container *drv) {
   unsigned long long weight_transfer_time_ns = (weight_transfer_cycles * 5);
   float send_speed = drv->mdma->dmas[0].get_send_bandwidth();
   float recv_speed = drv->mdma->dmas[0].get_recv_bandwidth();
-  bool preloaded = drv->t.layer_preloaded[drv->t.layer];
+  bool preloaded = drv->t.is_preloaded(drv->t.layer);
   drv->mdma->dmas[0].profile_reset();
   std::ofstream file("layers.csv", std::ios::app);
   file << dparams.layer << ", " << M << ", " << N << ", " << K << ", "
@@ -222,7 +222,7 @@ static void EntryMM(const void *wgt, const void *inp, void *out, int M, int N,
   drv->out_stride = out_stride;
   drv->wgt_type = wgt_type;
   drv->a_t = a_t;
-  bool preloaded = drv->t.layer_preloaded[drv->t.layer];
+  bool preloaded = drv->t.is_preloaded(drv->t.layer);
 
   // cout << endl << "===========================" << endl;
   // cout << "BFPP_ACC || Pre-ACC Info" << endl;

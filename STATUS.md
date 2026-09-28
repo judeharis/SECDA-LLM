@@ -23,8 +23,9 @@ runs on SECDA. Simulation at `-b 16` gives 3.3429 (x86 CPU 3.3637). That gap is
 not the model: replaying 60 real board MUL_MAT calls through the SystemC model
 gives bit-identical outputs (310,464 of 310,464). The activations differ between
 ARM and x86 from the first layer, through CPU-op rounding ([TODO.md](TODO.md)
-1.5). With `-fa off`, v4's SOFT_MAX offload produces garbage
-text (TODO 2.2).
+1.5). With `-fa off`, v4 now runs SOFT_MAX on the accelerator end to end: the
+generated text equals the CPU-only build's, in simulation and on the board (TODO
+2.2 fixed the layer shift that had produced garbage).
 
 **The llama.cpp fork is down to backend registration:** 3 files and 17 lines
 over upstream `06938ac12`.
@@ -159,9 +160,6 @@ The actionable follow-ups are in [TODO.md](TODO.md).
   - **Root.** The suite starts the run scripts over ssh as `board_user` (`ubuntu`)
     without sudo. The scripts load bitstreams, write `/dev/u-dma-buf-mgr` and run
     the binaries without sudo, so they need root.
-- **v4 SOFT_MAX with `-fa off` is broken end to end.** Garbage text in both
-  drivers, with no desync warning (the tile-map shift, TODO 2.2). The model runs
-  only avoid it because auto flash-attention removes SOFT_MAX.
 - **Bitstreams are not tracked.** The migration plan's Phase 4 said to track
   `hardware_automation/bitstreams/KRIA/*.bit`/`.hwh`, plus the KV260 CPU reset
   bitstream, as SECDA-Sandboxed does.
@@ -175,8 +173,9 @@ The actionable follow-ups are in [TODO.md](TODO.md).
   - The CPU reset pair used on the board is SECDA-Sandboxed's tracked `CPU_1_0`
     (same md5).
   - Either track all three pairs, or say here why they stay untracked.
-- **Latent driver bugs kept for parity.** They are listed in the minimal-fork spec
-  §6, risk 4. The planner now reports three of them as desync warnings.
+- **Explicit layers don't replan.** A planned MUL_MAT whose weights moved since
+  planning is sent with the call, with a warning, rather than replanned (TODO
+  2.2). Nothing in llama.cpp's current flow moves weights between plans.
 - **Small:**
   - `secda_profile.json` and `dma<N>.csv` are in neither `.gitignore` nor the
     fork excludes that `setup.sh` writes.
@@ -188,7 +187,8 @@ The actionable follow-ups are in [TODO.md](TODO.md).
 
 ## Next session
 
-1. Work through [TODO.md](TODO.md): 2.2 (v4 SOFT_MAX with `-fa off`) first.
+1. Work through [TODO.md](TODO.md): section 3 (hardware flow) or 4 (benchmark
+   suite).
 2. Rotate the Pushbullet tokens.
 3. Decide which branch carries the work. SECDA-DS's `CLAUDE.md` names
    `v3_core_upgrade`, but the work is on `v3_core_upgrade_wip`.

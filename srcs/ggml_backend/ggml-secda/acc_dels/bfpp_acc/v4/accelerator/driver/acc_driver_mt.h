@@ -135,22 +135,22 @@ void LoadWeights_Preloaded(acc_container *drv, int m, int mstep, int nstep,
   if (wgt_type == 2) wgt_blck = Q2_X32;
 
   uint32_t tile_offset_A =
-      std::get<0>(drv->t.tile_offset_map_A[drv->t.layer][m]) + DMA_INP_SIZE;
+      std::get<0>(drv->t.tile_offset_map_A.at(drv->t.layer).at(m)) + DMA_INP_SIZE;
   uint32_t tile_offset_B =
-      std::get<0>(drv->t.tile_offset_map_B[drv->t.layer][m]) + DMA_INP_SIZE;
+      std::get<0>(drv->t.tile_offset_map_B.at(drv->t.layer).at(m)) + DMA_INP_SIZE;
   uint32_t tile_offset_C =
-      std::get<0>(drv->t.tile_offset_map_C[drv->t.layer][m]) + DMA_INP_SIZE;
+      std::get<0>(drv->t.tile_offset_map_C.at(drv->t.layer).at(m)) + DMA_INP_SIZE;
   uint32_t tile_offset_D =
-      std::get<0>(drv->t.tile_offset_map_D[drv->t.layer][m]) + DMA_INP_SIZE;
+      std::get<0>(drv->t.tile_offset_map_D.at(drv->t.layer).at(m)) + DMA_INP_SIZE;
 
   uint32_t packets_per_tile_A =
-      std::get<1>(drv->t.tile_offset_map_A[drv->t.layer][m]);
+      std::get<1>(drv->t.tile_offset_map_A.at(drv->t.layer).at(m));
   uint32_t packets_per_tile_B =
-      std::get<1>(drv->t.tile_offset_map_B[drv->t.layer][m]);
+      std::get<1>(drv->t.tile_offset_map_B.at(drv->t.layer).at(m));
   uint32_t packets_per_tile_C =
-      std::get<1>(drv->t.tile_offset_map_C[drv->t.layer][m]);
+      std::get<1>(drv->t.tile_offset_map_C.at(drv->t.layer).at(m));
   uint32_t packets_per_tile_D =
-      std::get<1>(drv->t.tile_offset_map_D[drv->t.layer][m]);
+      std::get<1>(drv->t.tile_offset_map_D.at(drv->t.layer).at(m));
 
   uint32_t op = OPCODE_LOAD_WGT, ld = 0;
   DMA_I[ld++] = op;
@@ -233,8 +233,7 @@ void LoadWeights_Preloaded(acc_container *drv, int m, int mstep, int nstep,
 
 void LoadWeights(acc_container *drv, int m, int mstep, int nstep, int kb,
                  char *wgt_block) {
-  if (drv->t.alloced_layers >= drv->t.layer &&
-      drv->t.layer_preloaded[drv->t.layer]) {
+  if (drv->t.is_preloaded(drv->t.layer)) {
     LoadWeights_Preloaded(drv, m, mstep, nstep, kb, wgt_block);
   } else {
     LoadWeights_Inference(drv, m, mstep, nstep, kb, wgt_block);

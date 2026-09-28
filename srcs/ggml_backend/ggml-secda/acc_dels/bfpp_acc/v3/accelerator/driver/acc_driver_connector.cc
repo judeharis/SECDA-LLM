@@ -28,6 +28,8 @@ void updateProfile(std::chrono::nanoseconds time) {
 
 bool modelPlanned() { return bfpp_acc::modelPlanned(); }
 
+void setLayer(int layer) { bfpp_acc::setLayer(layer); }
+
 bool preloadWeights(unsigned wgt_size, int layer, int M, int K, const void *wgt,
                     int wgt_type) {
   return bfpp_acc::preloadWeights(wgt_size, layer, M, K, wgt, wgt_type);

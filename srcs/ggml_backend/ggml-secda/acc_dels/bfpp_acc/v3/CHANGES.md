@@ -1,5 +1,26 @@
 # bfpp_acc/v3 — changes
 
+## 2026-09-28 — explicit MUL_MAT layers (driver hygiene)
+
+**Why.** Shared with v4, where SOFT_MAX nodes between the MUL_MATs shifted the
+driver's positional layer counter and MUL_MATs ran with another layer's
+weights (SECDA-LLM TODO 2.1, 2.2). v3 has no SOFT_MAX, so its results don't
+change; it gets the same explicit layers and bounds checks.
+
+| Where | Change |
+|---|---|
+| `driver*/acc_container.h` | `reset()` clears `layer_preloaded` (`assign`; `resize` kept stale flags); `is_preloaded(l)` with bounds checks; `set_tile_maps(l, ...)` stores tile maps by layer; `alloc_layer` refuses `l < 0` |
+| `driver*/driver_interface.h` | `preloadWeights` files the tile maps under its layer (was `push_back`); new `setLayer(int)` |
+| `driver*/acc_driver_mt.h` | `LoadWeights` uses `is_preloaded(layer)` (was `alloced_layers >= layer && layer_preloaded[layer]`); tile maps read with `.at(layer).at(m)` |
+| `driver*/acc_driver.h` | the `EntryMM` flag reads use `is_preloaded` |
+| `driver*/acc_driver_connector.{h,cc}` | `setLayer` exported |
+| backend `secda_planner.cpp`, `ops_support.*`, `ggml-secda.cpp` | each planned MUL_MAT's layer is its MUL_MAT ordinal; `secda_planner_set_layer` calls `setLayer_T` before each MUL_MAT (-1, weights sent with the call, if unplanned or its weights moved) |
+
+**Verified.** Simulation: the gate suite is unchanged (68/68). KV260
+(`kriaB_L`): MUL_MAT 51/51 (55/55), `-b 16` perplexity 3.3636 unchanged,
+llama-cli text (flash attention auto and off) equal to the board's CPU-only
+`-fa off`, in both drivers.
+
 ## 2026-09-28 — secda_profile.json (SECDA-Core profiler)
 
 **Why.** SECDA-Core's profile parsers read `secda_profile.json`; SECDA-LLM only

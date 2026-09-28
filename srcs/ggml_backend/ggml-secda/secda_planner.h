@@ -4,10 +4,9 @@
 // Weight-preload planning for the SECDA backend, without any hook in llama.cpp.
 //
 // The driver preloads every supported MUL_MAT's weights into the accelerator's
-// DMA buffers once per graph and numbers those nodes ("layers") in graph order;
-// EntryMM then walks the same numbering as nodes are computed. That plan used to
-// be created by a call in the llama.cpp fork (llama-context.cpp) on the whole
-// graph. Here the backend builds it itself:
+// DMA buffers once per graph, filed by layer: the MUL_MAT's ordinal in the
+// plan. That plan used to be created by a call in the llama.cpp fork
+// (llama-context.cpp) on the whole graph. Here the backend builds it itself:
 //
 //  - ggml_backend_sched calls the backend's graph_optimize on each SECDA split of
 //    a split pass (ggml-backend.cpp, before the splits get their uids), so
@@ -17,7 +16,11 @@
 //    whole-graph plan whenever the scheduler puts every supported node on SECDA;
 //  - graph reuse (no re-split) keeps the plan and the preloaded weights;
 //  - a standalone graph (uid 0, no scheduler: test-backend-ops) is planned on
-//    compute, unless an explicit graph_plan_create already planned it.
+//    compute, unless an explicit graph_plan_create already planned it;
+//  - each planned MUL_MAT gets a layer, its ordinal among the plan's MUL_MATs,
+//    and the driver is told it before the node runs (secda_planner_set_layer).
+//    SOFT_MAX nodes and incomplete evaluations therefore can't shift which
+//    preloaded weights a MUL_MAT uses.
 
 #include "ggml-backend.h"
 #include "ggml.h"
@@ -53,9 +56,9 @@ void secda_planner_observe(secda_planner_state &st, const ggml_cgraph *g);
 void secda_planner_resolve(ggml_backend_t backend, secda_planner_state &st,
                            const ggml_cgraph *g);
 
-// Before each MUL_MAT / SOFT_MAX compute: diagnostic check that the driver's
-// layer counter is where the plan put this node (warns, never changes anything).
-void secda_planner_check_node(secda_planner_state &st, const ggml_tensor *node);
+// Before each MUL_MAT compute: tell the driver the node's planned layer, or -1
+// (weights sent with the call) if it isn't planned or its weights moved.
+void secda_planner_set_layer(secda_planner_state &st, const ggml_tensor *node);
 
 // After graph_compute's node loop.
 void secda_planner_end_compute(secda_planner_state &st);

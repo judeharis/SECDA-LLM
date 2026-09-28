@@ -63,7 +63,7 @@ static enum ggml_status ggml_secda_graph_compute(ggml_backend_t backend,
 
     switch (node->op) {
     case GGML_OP_MUL_MAT:
-      secda_planner_check_node(ctx->planner, node);
+      secda_planner_set_layer(ctx->planner, node);
       ggml_secda_mul_mat(ctx, node);
       break;
 
@@ -72,7 +72,6 @@ static enum ggml_status ggml_secda_graph_compute(ggml_backend_t backend,
 #if defined(BFPP_ACC_V4)
     // Jude: Added
     case GGML_OP_SOFT_MAX:
-      secda_planner_check_node(ctx->planner, node);
       ggml_secda_soft_max(ctx, node);
       break;
 #endif

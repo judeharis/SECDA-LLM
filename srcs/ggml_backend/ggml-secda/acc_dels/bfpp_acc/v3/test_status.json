@@ -78,6 +78,24 @@
         "commit": "fd906e0",
         "source": "manual",
         "notes": "Simulation vs hardware, bit for bit (TODO 1.5, scripts/sim_replay): 60 MUL_MAT calls (ffn_down q3_K, M=576 K=1536, N=1/2/16) captured on kriaB_L (BFPP_ACC_KRIA_3_0, driver) during the -b 16 -ub 16 perplexity run and replayed through the SystemC model: 0 of 310,464 outputs differ. Replaying a simulation capture in simulation also gives 0. This corrects the previous record: the -b 16 perplexity gap (sim 3.3429 vs board 3.3636) is not the accelerator. The q8_K activations differ between ARM and x86 from call 0 (CPU-op rounding upstream of each MUL_MAT; weights identical)."
+      },
+      {
+        "level": "builds_sim",
+        "outcome": "pass",
+        "target": "sysc",
+        "date": "2026-09-28",
+        "commit": "7676cdf",
+        "source": "manual",
+        "notes": "Explicit MUL_MAT layers (TODO 2.1/2.2, driver and driver_batches), with the change committed alongside this record. Gate suite (68 checks, all 4 sim variants) identical to the minimal-fork baseline. llama-cli -fa off: text identical to the x86 CPU-only build."
+      },
+      {
+        "level": "verified_accurate",
+        "outcome": "pass",
+        "target": "KRIA",
+        "date": "2026-09-28",
+        "commit": "7676cdf",
+        "source": "manual",
+        "notes": "Explicit MUL_MAT layers on kriaB_L (test_0928f, checksummed; bitstream unchanged). driver and driver_batches: MUL_MAT 51/51 and 55/55; -b 16 -ub 16 perplexity 3.3636 +/- 0.60469 (30/30 preloaded), unchanged; secda-llama-cli text with flash attention auto and -fa off identical to the board CPU-only build's -fa off text and to the x86 CPU; no SECDA WARNING, no NaN, no u-dma-buf left."
       }
     ]
   }

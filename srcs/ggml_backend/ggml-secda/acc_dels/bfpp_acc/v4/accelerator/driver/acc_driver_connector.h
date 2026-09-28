@@ -15,6 +15,8 @@ void updatePlan(int supported_nodes);
 
 bool modelPlanned();
 
+void setLayer(int layer);
+
 #ifdef __cplusplus
 void updateProfile(std::chrono::nanoseconds);
 #else

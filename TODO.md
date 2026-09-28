@@ -32,14 +32,13 @@ Paths below are relative to this repo; `D/` is `srcs/ggml_backend/ggml-secda/acc
       - Board: v3/v4, both drivers, give MUL_MAT 51/51 and 55/55, SOFT_MAX 212/212,
         and no NaN.
       - 6.3 remains open if the owner prefers the old default.
-- [ ] **1.4 v4's SOFT_MAX unit end to end. Blocked on 2.2.** Checked 2026-09-28 in
-      simulation with `secda-llama-cli -fa off`:
-      - v3 generates text identical to the CPU-only build.
-      - v4 and v4-batches (60 SECDA nodes: 30 MUL_MAT plus 30 SOFT_MAX) generate
-        garbage ("amovereverevere...") with **no** `SECDA WARNING`, so the desync
-        check misses it.
-      - *Done when:* after 2.2, the v4 `-fa off` tokens equal the CPU-only build's, in
-        simulation and on the board.
+- [x] **1.4 v4's SOFT_MAX unit end to end.** Done 2026-09-28, after 2.2.
+      - **Before 2.2:** with `secda-llama-cli -fa off`, v4 and v4-batches (60 SECDA
+        nodes: 30 MUL_MAT plus 30 SOFT_MAX) generated garbage ("amovereverevere...")
+        in simulation, with no `SECDA WARNING`.
+      - **After 2.2:** v4 and v4b `-fa off` generate text identical to the CPU-only
+        build's, in simulation (vs x86 CPU) and on `kriaB_L` (vs the board CPU
+        `-fa off`), with 60 SECDA nodes and no warnings. v3 and v3b match too.
 - [x] **1.5 Simulation vs board numerics. Resolved 2026-09-28: the simulation is
       bit-exact; the inputs differ.** At `-b 16` (table in 1.1), simulation sat 0.6%
       below x86 CPU while the board sat 0.12% above its CPU.
@@ -61,24 +60,41 @@ Paths below are relative to this repo; `D/` is `srcs/ggml_backend/ggml-secda/acc
 
 ## 2. Driver fixes (spec Phase 2, H1/H2)
 
-These bugs were kept for parity during the migration (minimal-fork spec §6, risk 4). The
-planner reports three of them as `SECDA WARNING: layer desync`. Make each fix a
-separate commit, and re-run Gate A (a)-(c) after each one.
+These bugs were kept for parity during the migration (minimal-fork spec §6, risk 4).
+2.1 and 2.2 were done together on 2026-09-28, since 2.2 needs 2.1's bounds checks.
 
-- [ ] **2.1 H1, driver hygiene** (host-side only; all 4 driver variants):
-      - `acc_container.h`: `layer_preloaded.assign(500,false)` → size it from the plan;
-      - add `is_preloaded(l)` with a bounds check, and use it at the `EntryMM` flag
-        reads instead of `alloced_layers >= layer && ...`;
-      - `acc_driver_mt.h`: `.at(m)` instead of `[m]`.
-      Fixes stale `layer_preloaded` flags and the unbounded read at 500+ layers.
-- [ ] **2.2 H2, explicit layers:**
-      - the connector gets `setLayer(int)`;
-      - the planner gives each MUL_MAT its ordinal and calls `setLayer` before each
-        one;
-      - replan and warn if `src0->data` differs from the planned layer.
-      Fixes the v4 SOFT_MAX tile-map shift with `-fa off`, the zero-row SOFT_MAX desync
-      and the eval-callback early-break desync.
-      *Extra gate:* 1.4.
+- [x] **2.1 H1, driver hygiene** (all 4 driver variants; `acc_container.h` and
+      `acc_driver_mt.h` are identical in all four):
+      - `reset()` uses `layer_preloaded.assign(500, false)`. `resize` had kept the
+        previous plan's flags set.
+      - `is_preloaded(l)`, with bounds checks (`l < 0` means unplanned), replaces
+        `alloced_layers >= layer && layer_preloaded[layer]` in `LoadWeights` and
+        the `EntryMM` flag reads.
+      - The tile maps use `.at(layer).at(m)`.
+- [x] **2.2 H2, explicit layers.** The bug: the planner numbered SOFT_MAX nodes
+      too, while the driver pushed one tile map per preloaded MUL_MAT and then
+      looked it up by that shared number. With `-fa off`, MUL_MAT *k* therefore
+      used another layer's weights.
+      - **Driver:** `setLayer(int)` in the connector and `driver_interface.h`
+        (backend `setLayer_T`). The tile maps are stored by layer
+        (`set_tile_maps`), and `alloc_layer` refuses `l < 0`.
+      - **Planner:** each planned MUL_MAT's layer is its MUL_MAT ordinal, which is
+        also what `preload_weights_alloc` gets. `secda_planner_set_layer`, which
+        replaces `check_node`, calls `setLayer` before each MUL_MAT. SOFT_MAX no
+        longer touches layers. The positional mirror is gone, and with it the
+        "layer desync" warnings.
+      - **Unplanned nodes:** a MUL_MAT that isn't in the plan, or whose weights
+        moved since planning, gets layer -1 (weights sent with the call) and one
+        warning. This was chosen over the spec's "replan", because nothing in
+        llama.cpp's current flow moves weights between plans.
+      - **What it fixes:** the tile-map shift with `-fa off`. By construction, a
+        zero-row SOFT_MAX or an eval-callback early exit can no longer shift a
+        MUL_MAT's layer; neither case was run.
+      - **Verified:**
+        - the gate suite gives 68/68, identical to the baseline;
+        - 1.4 passes in simulation and on `kriaB_L`;
+        - board tbo 51/51 and 55/55, SOFT_MAX 212/212;
+        - `-b 16` perplexity 3.3636, unchanged, in all four variants.
 - [ ] **2.3 (optional) H3:** the `SECDA_GRAPH_STATS` writer.
 
 ## 3. Hardware flow

@@ -39,6 +39,8 @@ void updatePlan_T(int supported_nodes) { updatePlan(supported_nodes); }
 
 bool modelPlanned_T() { return modelPlanned(); }
 
+void setLayer_T(int layer) { setLayer(layer); }
+
 void ggml_secda_mul_mat(ggml_secda_context *ctx, struct ggml_tensor *dst) {
 
   auto start_1 = std::chrono::high_resolution_clock::now();

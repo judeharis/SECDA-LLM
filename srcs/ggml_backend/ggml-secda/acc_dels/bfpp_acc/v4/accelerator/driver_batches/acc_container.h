@@ -219,7 +219,8 @@ struct layer_details {
     alloc_allowed = LAYER_PREALLOC;
     alloced_layers = 0;
     curr_offset = 0;
-    layer_preloaded.resize(500, false);
+    // assign, not resize: resize keeps the previous plan's flags set.
+    layer_preloaded.assign(500, false);
     for (int i = 0; i < DMA_COUNT; i++) {
       dma_size_list[i] = 0;
       curr_offsets[i] = 0;
@@ -230,8 +231,32 @@ struct layer_details {
     tile_offset_map_D.clear();
   }
 
+  // Layers are the planner's MUL_MAT ordinals (set per call with setLayer);
+  // -1 is a MUL_MAT the plan doesn't cover.
+  bool is_preloaded(int l) const {
+    return l >= 0 && (size_t)l < layer_preloaded.size() && layer_preloaded[l];
+  }
+
+  // Tile maps are indexed by layer, like layer_preloaded.
+  void set_tile_maps(int l, const map<int, tuple<uint32_t, uint32_t>> &a,
+                     const map<int, tuple<uint32_t, uint32_t>> &b,
+                     const map<int, tuple<uint32_t, uint32_t>> &c,
+                     const map<int, tuple<uint32_t, uint32_t>> &d) {
+    if (tile_offset_map_A.size() <= (size_t)l) {
+      tile_offset_map_A.resize(l + 1);
+      tile_offset_map_B.resize(l + 1);
+      tile_offset_map_C.resize(l + 1);
+      tile_offset_map_D.resize(l + 1);
+    }
+    tile_offset_map_A[l] = a;
+    tile_offset_map_B[l] = b;
+    tile_offset_map_C[l] = c;
+    tile_offset_map_D[l] = d;
+  }
+
   bool alloc_layer(int layer, unsigned int K, unsigned int M,
                    unsigned int wgt_type) {
+    if (layer < 0) return false;
     int kb = K / 256;
     int number_of_blocks = (M * kb);
     // Might need to change to tile based allocation and not layer based allocation
