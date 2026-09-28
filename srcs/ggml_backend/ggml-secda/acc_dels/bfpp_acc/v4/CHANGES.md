@@ -1,5 +1,21 @@
 # bfpp_acc/v4 — changes
 
+## 2026-09-28 — secda_profile.json (SECDA-Core profiler)
+
+**Why.** SECDA-Core's profile parsers read `secda_profile.json`; SECDA-LLM only
+wrote `prf.csv` and read two of the 14 hardware counters, by index.
+
+| Where | Change |
+|---|---|
+| `driver*/driver_interface.h` | the 14 counters are named (`name_hwc`), in register order |
+| `driver*/acc_driver.h`, `driver*/acc_driver_softmax.h` | under `ACC_PROFILE`, every counter is sampled after each accelerator call (after the driver-time measurement) and summed |
+| `driver*/acc_container.h` | at exit, next to `prf.csv`: `secda_profile.json` with the same timings plus the named counter totals (SECDA-Core `write_secda_profile_us`, `551f407`; `$SECDA_PROFILE_PATH` overrides the path) |
+
+**Verified.** Simulation: the gate suite is unchanged (68/68 against the
+pre-migration baseline); the JSON's timings equal `prf.csv`. KV260 (`kriaB_L`):
+the same, with real counter totals (Load_Unit cycles x 5 ns = prf.csv's
+`fpga_weight_transfer_cycles`).
+
 ## 2026-09-28 — SECDA-Core axi_support v6, HWC order, first KV260 build
 
 **Why.** SECDA-LLM moved onto the suite's SECDA-Core (SECDA-DS

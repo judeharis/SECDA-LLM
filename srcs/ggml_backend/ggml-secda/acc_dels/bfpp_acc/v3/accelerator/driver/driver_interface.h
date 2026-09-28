@@ -225,6 +225,21 @@ static void initACC() {
     drv->hwc->set_target_state(3, 31); // Scheduler
     drv->hwc->set_target_state(4, 1);  // Weight_Transfer
     drv->hwc->reset_hwc();             // Reset HWC
+    // Counter names, in register order (the HWC_CTHREAD / HWC_Bind_Signals
+    // order in acc.sc.h and systemc_binding.h), for secda_profile.json.
+    drv->hwc->name_hwc(0, "Control_Unit");
+    drv->hwc->name_hwc(1, "Load_Unit");
+    drv->hwc->name_hwc(2, "Store_Unit");
+    drv->hwc->name_hwc(3, "Scheduler");
+    drv->hwc->name_hwc(4, "Weight_Transfer_A");
+    drv->hwc->name_hwc(5, "Weight_Transfer_B");
+    drv->hwc->name_hwc(6, "Weight_Transfer_C");
+    drv->hwc->name_hwc(7, "Weight_Transfer_D");
+    drv->hwc->name_hwc(8, "WeightLoader_A");
+    drv->hwc->name_hwc(9, "WeightLoader_B");
+    drv->hwc->name_hwc(10, "WeightLoader_C");
+    drv->hwc->name_hwc(11, "WeightLoader_D");
+    drv->hwc->name_hwc(12, "HWC_X1_Compute");
 
 #ifdef DELEGATE_VERBOSE
     std::ofstream layer_file;

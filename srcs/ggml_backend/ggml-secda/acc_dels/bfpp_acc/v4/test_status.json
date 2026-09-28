@@ -42,6 +42,15 @@
         "commit": "79bed9d",
         "source": "manual",
         "notes": "Minimal llama.cpp fork (625ec1d28: backend registration only) with the backend planning from graph_optimize (875e34b) and the secda-* tools (srcs/tools). Same BFPP_ACC_KRIA_4_0 bitstream. kriaB_L test_0928c, driver and driver_batches: secda-test-backend-ops MUL_MAT 51/51 (driver_batches 55/55), SOFT_MAX 212/212; llama-perplexity 3.3625 +/- 0.60376 (= board CPU-only build); secda-llama-cli 30/30 nodes preloaded in every plan, no SECDA WARNING, generated text identical to simulation; secda-llama-bench and secda-llama-cli write llama_perf.csv, synth vtbo/tbo written. No cma_alloc failure, no u-dma-buf left. Simulation: 68/68 gate checks identical to the pre-change baseline."
+      },
+      {
+        "level": "runs_on_hardware",
+        "outcome": "pass",
+        "target": "KRIA",
+        "date": "2026-09-28",
+        "commit": "SECDA-Core 551f407",
+        "source": "manual",
+        "notes": "secda_profile.json: secda-llama-cli on kriaB_L (after a reboot: CMA had fragmented after 38 h up and the 4x192 MB u-dma-bufs failed) writes it next to prf.csv; timings equal prf.csv; 14 named counters with real totals (Load_Unit 9.6e6 cycles x 5 ns = fpga_weight_transfer_cycles). Simulation gate 68/68 unchanged."
       }
     ]
   }

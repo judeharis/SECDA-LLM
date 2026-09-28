@@ -14,6 +14,7 @@
 
 #include "../acc_config.sc.h"
 #include "secda-core/axi_support/v6/axi_api.h"
+#include "secda-core/secda_profiler/secda_profile_writer.h"
 #include "secda-core/secda_profiler/profiler.h"
 #include "secda-core/secda_utils/acc_helpers.h"
 #include "secda-core/secda_utils/utils.h"
@@ -71,6 +72,22 @@ struct acc_times {
   duration_ns esti_weight_transfer_cycles;
   duration_ns layer_total;
 
+  // Hardware counters summed over every accelerator call (they are reset per
+  // call), for secda_profile.json; see add_hwc().
+  std::vector<HwcSample> hwc_totals;
+
+  void add_hwc(const std::vector<HwcSample> &samples) {
+    if (hwc_totals.size() < samples.size()) hwc_totals.resize(samples.size());
+    for (size_t i = 0; i < samples.size(); i++) {
+      HwcSample &t = hwc_totals[i];
+      t.index = samples[i].index;
+      t.name = samples[i].name;
+      t.cycles += samples[i].cycles;
+      t.state = samples[i].state;
+      t.target_state = samples[i].target_state;
+    }
+  }
+
   void print() {
 #ifdef ACC_PROFILE
     cerr << "================================================" << endl;
@@ -116,6 +133,24 @@ struct acc_times {
     prf_file_out_l(TSCALE, layer_total, file);
     file << endl;
     file.close();
+
+    // The same numbers as prf.csv, plus the named hardware counters, in
+    // SECDA-Core's secda_profile.json schema ($SECDA_PROFILE_PATH overrides
+    // the path).
+    auto us = [](duration_ns d) { return (long long)duration_cast<TSCALE>(d).count(); };
+    write_secda_profile_us("secda_profile.json",
+                           {{"driver_total", us(driver_total)},
+                            {"fpga_wgt_send", us(fpga_wgt_send)},
+                            {"fpga_inp_send", us(fpga_inp_send)},
+                            {"fpga_compute", us(fpga_compute)},
+                            {"fpga_inp_pack", us(fpga_inp_pack)},
+                            {"fpga_wgt_pack", us(fpga_wgt_pack)},
+                            {"fpga_wgt_pack_opt", us(fpga_wgt_pack_opt)},
+                            {"fpga_compute_cycles", us(fpga_compute_cycles)},
+                            {"fpga_weight_transfer_cycles", us(fpga_weight_transfer_cycles)},
+                            {"esti_weight_transfer_cycles", us(esti_weight_transfer_cycles)},
+                            {"layer_total", us(layer_total)}},
+                           hwc_totals);
 #endif
   }
 

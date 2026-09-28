@@ -127,6 +127,9 @@ static void EntrySoftmax(const float *logits, const void *mask,
 
   SYSC_ON(drv->profile->saveProfile(drv->acc->profiling_vars));
   prf_end(1, a_t->driver_total);
+#ifdef ACC_PROFILE
+  drv->a_t->add_hwc(drv->hwc->hwc_samples());
+#endif
 
   if (node_done) advance_layer();
 }

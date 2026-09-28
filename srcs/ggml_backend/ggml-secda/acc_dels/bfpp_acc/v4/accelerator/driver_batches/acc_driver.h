@@ -286,6 +286,9 @@ static void EntryMM(const void *wgt, const void *inp, void *out, int M, int N,
   drv->a_t->fpga_compute_cycles += duration_ns(compute_cycles * 5);
   drv->a_t->fpga_weight_transfer_cycles +=
       duration_ns(weight_transfer_cycles * 5);
+#ifdef ACC_PROFILE
+  drv->a_t->add_hwc(drv->hwc->hwc_samples());
+#endif
 
   #ifdef PRINT_FILE
     char buf[256];
