@@ -20,8 +20,8 @@ Paths below are relative to this repo; `D/` is `srcs/ggml_backend/ggml-secda/acc
       | x86 CPU-only | 3.3601 | 3.3637 |
 
       All 30 MUL_MATs ran on SECDA and preloaded, with no warnings. The board's
-      accelerator is within 0.12% of the board CPU. Simulation doesn't match the
-      board: see 1.5.
+      accelerator is within 0.12% of the board CPU. Simulation and board differ
+      because their inputs differ, not their accelerator: see 1.5.
 - [x] **1.2 Perplexity input in the repo.** `perplexity/ppl_input.txt` (md5
       `b6d844ba5fc667529f6efd3cf3cdd204`, byte-identical to the one used for the
       recorded values). The README and `perplexity/README.md` point at it.
@@ -40,20 +40,24 @@ Paths below are relative to this repo; `D/` is `srcs/ggml_backend/ggml-secda/acc
         check misses it.
       - *Done when:* after 2.2, the v4 `-fa off` tokens equal the CPU-only build's, in
         simulation and on the board.
-- [ ] **1.5 Simulation vs board numerics.** At `-b 16` (table in 1.1), the board's
-      accelerator tracks its CPU: the gap is -0.0141 on chunk 1 and +0.0040 at the
-      end. Simulation is off by -0.0455 on chunk 1 and -0.0208 at the end. At
-      `-b 128`, with 1 SECDA node, simulation equals the x86 CPU.
-      - Candidates:
-        - the SystemC model differs from the HLS hardware for some input
-          (rounding, saturation, a tile edge);
-        - host-side driver float code compiled differently (clang x86 vs gcc
-          aarch64, FMA contraction);
-        - a sim-only path in the driver (`#ifdef SYSC`).
-      - First step: dump one real MobileLLM MUL_MAT's inputs and output (e.g. layer
-        0 `ffn_down` at N=16), replay the same inputs in simulation and on the board,
-        and compare the outputs bit for bit.
-      - *Done when:* the cause is known, and either fixed or documented.
+- [x] **1.5 Simulation vs board numerics. Resolved 2026-09-28: the simulation is
+      bit-exact; the inputs differ.** At `-b 16` (table in 1.1), simulation sat 0.6%
+      below x86 CPU while the board sat 0.12% above its CPU.
+      - **Replay.** 60 real `ffn_down` MUL_MAT calls (q3_K, M=576, K=1536,
+        N=1/2/16) were captured on `kriaB_L` during the `-b 16` perplexity run and
+        replayed through the SystemC model. All 310,464 outputs were bit-identical.
+        The tool is in `scripts/sim_replay/`.
+      - **Inputs.** Comparing the simulation's own capture with the board's: the
+        weights are identical, but the q8_K activations already differ at call 0
+        (3 of 12 blocks, in the float scale only). By call 45, 93 of 96 blocks
+        differ, with 11,679 int8 values changed. The CPU ops before each MUL_MAT
+        (norms, activations) round differently on ARM and x86, and the difference
+        compounds through the layers.
+      - **Sensitivity.** This 2-chunk perplexity test amplifies such rounding: the
+        two CPU-only builds alone differ by 0.5% at `-b 128`. Compare only against
+        the CPU build on the same platform.
+      - The v3 `driver` was replayed; `driver_batches` and v4 share the MUL_MAT unit
+        but were not replayed.
 
 ## 2. Driver fixes (spec Phase 2, H1/H2)
 

@@ -19,9 +19,11 @@ SECDA-Core's flow. On `kriaB_L`:
 
 Perplexity at `-b 16 -ub 16`, with all 30 MUL_MATs on SECDA, gives 3.3636 on the
 board, within 0.12% of the board's CPU-only 3.3596. At `-b 128` only 1 of the 30
-runs on SECDA. Simulation at `-b 16` gives 3.3429, 0.6% below the x86 CPU's 3.3637,
-so simulation and board are not numerically equivalent; the cause is open
-([TODO.md](TODO.md) 1.5). With `-fa off`, v4's SOFT_MAX offload produces garbage
+runs on SECDA. Simulation at `-b 16` gives 3.3429 (x86 CPU 3.3637). That gap is
+not the model: replaying 60 real board MUL_MAT calls through the SystemC model
+gives bit-identical outputs (310,464 of 310,464). The activations differ between
+ARM and x86 from the first layer, through CPU-op rounding ([TODO.md](TODO.md)
+1.5). With `-fa off`, v4's SOFT_MAX offload produces garbage
 text (TODO 2.2).
 
 **The llama.cpp fork is down to backend registration:** 3 files and 17 lines
@@ -157,10 +159,6 @@ The actionable follow-ups are in [TODO.md](TODO.md).
   - **Root.** The suite starts the run scripts over ssh as `board_user` (`ubuntu`)
     without sudo. The scripts load bitstreams, write `/dev/u-dma-buf-mgr` and run
     the binaries without sudo, so they need root.
-- **Simulation and board differ numerically at `-b 16`.** Perplexity with all 30
-  MUL_MATs on SECDA: board 3.3636 (board CPU 3.3596), simulation 3.3429 (x86 CPU
-  3.3637). The board's accelerator tracks its CPU; simulation doesn't track x86.
-  TODO 1.5.
 - **v4 SOFT_MAX with `-fa off` is broken end to end.** Garbage text in both
   drivers, with no desync warning (the tile-map shift, TODO 2.2). The model runs
   only avoid it because auto flash-attention removes SOFT_MAX.
@@ -190,8 +188,7 @@ The actionable follow-ups are in [TODO.md](TODO.md).
 
 ## Next session
 
-1. Work through [TODO.md](TODO.md): 1.5 (simulation vs board numerics) and 2.2
-   (v4 SOFT_MAX with `-fa off`) first.
+1. Work through [TODO.md](TODO.md): 2.2 (v4 SOFT_MAX with `-fa off`) first.
 2. Rotate the Pushbullet tokens.
 3. Decide which branch carries the work. SECDA-DS's `CLAUDE.md` names
    `v3_core_upgrade`, but the work is on `v3_core_upgrade_wip`.

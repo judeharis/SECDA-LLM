@@ -22,7 +22,7 @@ automation flow) and is part of the SECDA-DS suite. Current state:
 | `.../bfpp_acc/legacy/{v1,v2}/` | Retired designs, still on axi_support v5. Configure stops if `SECDA_BFPP_ACC_V1` or `SECDA_BFPP_ACC_V2` is set. |
 | `srcs/tools/` | The `secda-*` tool variants (see *Tools* below): `patches/`, `secda_perf/` (the `llama_perf.csv` writer), `cmake/secda_apply_patch.cmake` and `refresh_patch.sh`. |
 | `cmake/` | `FindSYSC.cmake` (SystemC, found through `SYSTEMC_HOME`) and `FindSECDA_CORE.cmake` (a fallback for an out-of-tree SECDA-Core build). |
-| `scripts/` | `check_fork_markers.py` and `llama_fork_base` (the fork policy), and `install_systemc.sh`. |
+| `scripts/` | `check_fork_markers.py` and `llama_fork_base` (the fork policy), `install_systemc.sh`, and `sim_replay/` (replay board MUL_MAT calls through the SystemC model, bit for bit). |
 | `hardware_automation/` | Output of SECDA-Core's hardware flow: `generated/<TAG>/` projects and `bitstreams/KRIA/*.bit`/`.hwh`. All of it is gitignored. |
 | `benchmark/` | The board benchmark flow: `benchmark_suite.sh`, `run_e2e.sh`, `configs/` and `scripts/` (including `compile_send_kria.sh`). See `benchmark/README.md`. |
 | `perplexity/` | wikitext-2 data for `llama-perplexity`. |
@@ -189,8 +189,12 @@ The `-b 128` run mostly exercises the CPU. The driver's size check
 (`N x kb <= SUP_KNB`, 512) accepts only 1 of the 30 MUL_MAT nodes per chunk, and the
 rest run on the CPU. The `-b 16 -ub 16` run puts all 30 on SECDA, for every design
 variant: 3.3429 +/- 0.59671 in simulation (x86 CPU-only: 3.3637) and 3.3636 +/-
-0.60469 on the KV260 (board CPU-only: 3.3596). Simulation and board are not
-numerically equivalent at `-b 16`; see STATUS.md. Beyond perplexity, the accelerator's end-to-end coverage comes from
+0.60469 on the KV260 (board CPU-only: 3.3596). The gap between simulation and
+board is not the accelerator. The SystemC model reproduces the hardware bit for bit
+on replayed board inputs (`scripts/sim_replay`), but the CPU ops that produce those
+inputs round differently on ARM and x86, and this 2-chunk test amplifies that.
+Compare perplexity only against the CPU build on the same platform. Beyond
+perplexity, the accelerator's end-to-end coverage comes from
 `secda-llama-cli`, which plans 30/30 MUL_MAT nodes on SECDA, and from
 `secda-test-backend-ops`.
 

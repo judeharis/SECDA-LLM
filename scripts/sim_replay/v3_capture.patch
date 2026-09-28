@@ -1,0 +1,28 @@
+diff --git a/srcs/ggml_backend/ggml-secda/acc_dels/bfpp_acc/v3/accelerator/driver/acc_driver.h b/srcs/ggml_backend/ggml-secda/acc_dels/bfpp_acc/v3/accelerator/driver/acc_driver.h
+index 9610508..fa952e1 100644
+--- a/srcs/ggml_backend/ggml-secda/acc_dels/bfpp_acc/v3/accelerator/driver/acc_driver.h
++++ b/srcs/ggml_backend/ggml-secda/acc_dels/bfpp_acc/v3/accelerator/driver/acc_driver.h
+@@ -258,6 +258,23 @@ static void EntryMM(const void *wgt, const void *inp, void *out, int M, int N,
+   drv->a_t->add_hwc(drv->hwc->hwc_samples());
+ #endif
+ 
++  // Capture (scripts/sim_replay): write this call's inputs and output for replay.
++  if (const char *cap_dir = getenv("SECDA_CAPTURE_DIR")) {
++    static int cap_n = 0;
++    static int cap_max = getenv("SECDA_CAPTURE_MAX") ? atoi(getenv("SECDA_CAPTURE_MAX")) : 64;
++    if (cap_n < cap_max && N > 0) {
++      std::string p = std::string(cap_dir) + "/call_" + std::to_string(cap_n++) + ".bin";
++      FILE *f = fopen(p.c_str(), "wb");
++      int32_t hdr[8] = {M, N, K, wgt_type, inp_stride, wgt_stride, out_stride, dparams.layer};
++      fwrite(hdr, sizeof(hdr), 1, f);
++      fwrite(inp, 1, (size_t)N * inp_stride, f);
++      fwrite(wgt, 1, (size_t)M * wgt_stride, f);
++      for (int ns = 0; ns < N; ns++)
++        fwrite((char *)out + (size_t)ns * out_stride, sizeof(float), M, f);
++      fclose(f);
++    }
++  }
++
+   if (dparams.layer + 1 == drv->m.supported_nodes) {
+     drv->n++;
+     dparams.layer = 0;
