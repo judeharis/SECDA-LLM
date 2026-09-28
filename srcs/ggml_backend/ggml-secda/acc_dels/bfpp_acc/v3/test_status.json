@@ -33,6 +33,15 @@
         "commit": "b1f8613",
         "source": "manual",
         "notes": "First hardware build through the SECDA-Core flow: BFPP_ACC_KRIA_3_0, KRIA_dma_4_hp_4_ctrl_hwc.tcl, 200 MHz (FCLK 199.998), timing-tolerated, WNS -0.307 ns (6.1%), WHS/WPWS >= 0, IO and utilization gates pass, .hwh addresses match acc_config.sc.h. kriaB_L (kernel 1027+secda1), PYNQ load as root, test_0928b checksummed. test-backend-ops -b SECDA MUL_MAT 51/51 vs CPU; llama-perplexity 3.3625 +/- 0.60376, identical to the board's CPU-only build (x86 gives 3.3449: CPU-op rounding differs between ARM and x86, not the accelerator); llama-cli greedy tokens as in simulation; 30/30 MUL_MAT nodes preloaded. No cma_alloc failure, no u-dma-buf left, board reset to CPU_1_0."
+      },
+      {
+        "level": "verified_accurate",
+        "outcome": "pass",
+        "target": "KRIA",
+        "date": "2026-09-28",
+        "commit": "79bed9d",
+        "source": "manual",
+        "notes": "Minimal llama.cpp fork (625ec1d28: backend registration only) with the backend planning from graph_optimize (875e34b) and the secda-* tools (srcs/tools). Same BFPP_ACC_KRIA_3_0 bitstream. kriaB_L test_0928c, driver and driver_batches: secda-test-backend-ops MUL_MAT 51/51 (driver_batches 55/55); llama-perplexity 3.3625 +/- 0.60376 (= board CPU-only build); secda-llama-cli 30/30 nodes preloaded in every plan, no SECDA WARNING, generated text identical to simulation; secda-llama-bench and secda-llama-cli write llama_perf.csv, synth vtbo/tbo written. No cma_alloc failure, no u-dma-buf left. Simulation: 68/68 gate checks identical to the pre-change baseline."
       }
     ]
   }
