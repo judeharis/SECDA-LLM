@@ -208,6 +208,7 @@
         "SECDA_QK4": "ON",
         "SECDA_QK5": "ON",
         "SECDA_QK6": "ON",
+        "ACC_PRELOAD": "ON",
         "SECDA_BFPP_ACC_V3": "ON"
       }
     },
@@ -232,6 +233,7 @@
         "SECDA_QK4": "ON",
         "SECDA_QK5": "ON",
         "SECDA_QK6": "ON",
+        "ACC_PRELOAD": "ON",
         "SECDA_BFPP_ACC_V3": "ON"
       }
     }
