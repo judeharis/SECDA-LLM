@@ -12,48 +12,6 @@
 
 
 
-struct ggml_backend_plan_secda {
-  int supported_nodes = 0;
-  int preloaded_nodes = 0;
-  bool planned = false;
-  int plan_counter = 0;
-  int plan_reused = 0;
-  uint64_t graph_uid = 0;
-
-  void reset() {
-    if (planned) {
-      SECDA_COUT
-          << "================================================================"
-          << std::endl;
-      SECDA_COUT << "SECDA Plan: " << plan_counter << " Reused: " << plan_reused
-                 << " Supported nodes: " << supported_nodes
-                 << " Preloaded nodes: " << preloaded_nodes << std::endl;
-      SECDA_COUT
-          << "================================================================"
-          << std::endl;
-
-      supported_nodes = 0;
-      preloaded_nodes = 0;
-      planned = false;
-      plan_reused = 0;
-      graph_uid = 0;
-    }
-  }
-
-  ~ggml_backend_plan_secda() {
-    SECDA_COUT
-        << "================================================================"
-        << std::endl;
-    SECDA_COUT << "SECDA Plan: " << plan_counter << " Reused: " << plan_reused
-               << " Supported nodes: " << supported_nodes
-               << " Preloaded nodes: " << preloaded_nodes << std::endl;
-    SECDA_COUT
-        << "================================================================"
-        << std::endl;
-  }
-};
-
-static struct ggml_backend_plan_secda secda_plan;
 
 // ************************************* //
 // backend interface
@@ -67,139 +25,56 @@ static const char *ggml_secda_get_name(ggml_backend_t backend) {
 
 static void ggml_secda_free(ggml_backend_t backend) {
   ggml_secda_context *ctx = (ggml_secda_context *)backend->context;
+  secda_planner_backend_free(ctx->planner);
   delete ctx;
   delete backend;
 }
 
+// Weights are preloaded by the planner (secda_planner.h): on the first compute
+// of each scheduler split pass, or here for a standalone (uid 0) graph.
 static ggml_backend_graph_plan_t
 ggml_secda_graph_plan_create(ggml_backend_t backend,
                              const struct ggml_cgraph *cgraph) {
-
-  // cgraph->uid == 0 is ggml's default/unset sentinel (e.g. ggml_graph_view()
-  // always returns 0, since a view isn't meant to have a durable identity).
-  // Callers that evaluate ops via transient per-node views - such as
-  // test-backend-ops' node-by-node correctness comparison - therefore always
-  // present uid 0, which would otherwise make every such call after the
-  // first look like "the same graph" and incorrectly reuse stale preloaded
-  // weights from an unrelated node/tensor. Real inference is unaffected:
-  // ggml_backend_sched always assigns a genuine unique uid before dispatch.
-  if (secda_plan.planned && cgraph->uid != 0 &&
-      secda_plan.graph_uid == cgraph->uid) {
-    secda_plan.plan_reused++;
-    return &secda_plan;
-  }
-  // if (secda_plan.planned) return &secda_plan;
-  secda_plan.reset();
-  secda_plan.graph_uid = cgraph->uid;
-  resetPlan_T();
-  SECDA_COUT << std::endl;
-  SECDA_COUT
-      << "================================================================"
-      << std::endl;
-  SECDA_COUT << "SECDA Graph Plan Create" << std::endl;
-
-  // Code to to preload weights
-  // Need to adapt to support different MatMul Quantization types
-  int layer = 0;
-
-#ifdef SECDA_LOG
-  std::ofstream plans_file("_plans/plans" +
-                               std::to_string(secda_plan.plan_counter) + ".csv",
-                           std::ios::out);
-  plans_file << "plan_count,layer,M,K,N,wgt_type,weight_size,preloaded"
-             << std::endl;
-#endif
-
-  for (int i = 0; i < cgraph->n_nodes; i++) {
-    struct ggml_tensor *node = cgraph->nodes[i];
-    bool node_supported = ggml_backend_supports_op(backend, node);
-    if (node_supported) {
-      // Jude: Added - only MUL_MAT nodes have weights to preload; a SOFT_MAX
-      // node's src0/src1 are logits/mask, not weight/activation, and would
-      // be misinterpreted by the preload logic below. SOFT_MAX still
-      // occupies one shared layer slot (secda_plan.supported_nodes++;
-      // layer++; below, unconditional) so EntrySoftmax's tail bookkeeping
-      // stays in lockstep with EntryMM's.
-      if (node->op == GGML_OP_MUL_MAT) {
-        const struct ggml_tensor *src0 = node->src[0];
-        const struct ggml_tensor *src1 = node->src[1];
-        const enum ggml_type type = src0->type;
-
-        const int64_t K = src1->ne[0];
-        const int64_t M = node->ne[0];
-
-        int wgt_type = 3;
-        if (type == GGML_TYPE_Q6_K) wgt_type = 6;
-        if (type == GGML_TYPE_Q5_K) wgt_type = 5;
-        if (type == GGML_TYPE_Q4_K) wgt_type = 4;
-        if (type == GGML_TYPE_Q3_K) wgt_type = 3;
-        if (type == GGML_TYPE_Q2_K) wgt_type = 2;
-
-        int64_t weight_size = 0;
-        if (wgt_type == 6) weight_size = M * (K / 256) * sizeof(block_q6_K) + 64;
-        if (wgt_type == 5) weight_size = M * (K / 256) * sizeof(block_q5_K) + 64;
-        if (wgt_type == 4) weight_size = M * (K / 256) * sizeof(block_q4_K) + 64;
-        if (wgt_type == 3) weight_size = M * (K / 256) * sizeof(block_q3_K) + 64;
-        if (wgt_type == 2) weight_size = M * (K / 256) * sizeof(block_q2_K) + 64;
-
-        bool preloaded =
-            preload_weights_alloc(weight_size, layer, M, K, src0->data, wgt_type);
-#ifdef SECDA_LOG
-        const int64_t N = src1->ne[1];
-        plans_file << secda_plan.plan_counter << "," << layer << "," << M << ","
-                   << K << "," << N << "," << wgt_type << "," << weight_size
-                   << "," << (preloaded ? 1 : 0) << std::endl;
-#endif
-        if (preloaded) secda_plan.preloaded_nodes++;
-      }
-      secda_plan.supported_nodes++;
-      layer++;
-    }
-  }
-#ifdef SECDA_LOG
-  plans_file.close();
-#endif
-  updatePlan_T(secda_plan.supported_nodes);
-
-  SECDA_COUT << "SECDA Supported nodes: " << secda_plan.supported_nodes
-             << " Preloaded nodes: " << secda_plan.preloaded_nodes << std::endl;
-  SECDA_COUT
-      << "================================================================"
-      << std::endl;
-  secda_plan.planned = true;
-  secda_plan.plan_counter++;
-  return &secda_plan;
+  ggml_secda_context *ctx = (ggml_secda_context *)backend->context;
+  return secda_planner_plan_create(backend, ctx->planner, cgraph);
 }
 
-static void secda_graph_compute_perf_stats_node(struct ggml_tensor *node,
-                                                int s_cycles,
-                                                int64_t s_time_us) {
-  int64_t cycles_cur = ggml_cycles() - s_cycles;
-  int64_t time_us_cur = ggml_time_us() - s_time_us;
+static void ggml_secda_graph_plan_free(ggml_backend_t backend,
+                                       ggml_backend_graph_plan_t plan) {
+  ggml_secda_context *ctx = (ggml_secda_context *)backend->context;
+  secda_planner_plan_free(ctx->planner, plan);
+}
 
-  node->perf_runs++;
-  node->perf_cycles += cycles_cur;
-  node->perf_time_us += time_us_cur;
-  node->isSECDA = 1;
+// Called by ggml_backend_sched on each SECDA split of a split pass: record it
+// (the graph is not modified).
+static void ggml_secda_graph_optimize(ggml_backend_t backend,
+                                      struct ggml_cgraph *cgraph) {
+  ggml_secda_context *ctx = (ggml_secda_context *)backend->context;
+  secda_planner_observe(ctx->planner, cgraph);
 }
 
 static enum ggml_status ggml_secda_graph_compute(ggml_backend_t backend,
                                                  struct ggml_cgraph *cgraph) {
   ggml_secda_context *ctx = (ggml_secda_context *)backend->context;
+  secda_planner_resolve(backend, ctx->planner, cgraph);
 
   for (int i = 0; i < cgraph->n_nodes; i++) {
     struct ggml_tensor *node = cgraph->nodes[i];
-    int64_t perf_node_start_cycles = ggml_cycles();
-    int64_t perf_node_start_time_us = ggml_time_us();
 
     switch (node->op) {
-    case GGML_OP_MUL_MAT: ggml_secda_mul_mat(ctx, node); break;
+    case GGML_OP_MUL_MAT:
+      secda_planner_check_node(ctx->planner, node);
+      ggml_secda_mul_mat(ctx, node);
+      break;
 
     case GGML_OP_OUT_PROD: ggml_secda_out_prod(ctx, node); break;
 
 #if defined(BFPP_ACC_V4)
     // Jude: Added
-    case GGML_OP_SOFT_MAX: ggml_secda_soft_max(ctx, node); break;
+    case GGML_OP_SOFT_MAX:
+      secda_planner_check_node(ctx->planner, node);
+      ggml_secda_soft_max(ctx, node);
+      break;
 #endif
 
     case GGML_OP_NONE:
@@ -211,9 +86,8 @@ static enum ggml_status ggml_secda_graph_compute(ggml_backend_t backend,
     default:
       GGML_ABORT("%s: unsupported op %s\n", __func__, ggml_op_desc(node));
     }
-    secda_graph_compute_perf_stats_node(node, perf_node_start_cycles,
-                                        perf_node_start_time_us);
   }
+  secda_planner_end_compute(ctx->planner);
 
   return GGML_STATUS_SUCCESS;
 
@@ -230,13 +104,13 @@ static struct ggml_backend_i secda_backend_i = {
     /* .cpy_tensor_async        = */ NULL,
     /* .synchronize             = */ NULL,
     /* .graph_plan_create       = */ ggml_secda_graph_plan_create,
-    /* .graph_plan_free         = */ NULL,
+    /* .graph_plan_free         = */ ggml_secda_graph_plan_free,
     /* .graph_plan_update       = */ NULL,
     /* .graph_plan_compute      = */ NULL,
     /* .graph_compute           = */ ggml_secda_graph_compute,
     /* .event_record            = */ NULL,
     /* .event_wait              = */ NULL,
-    /* .graph_optimize          = */ NULL,
+    /* .graph_optimize          = */ ggml_secda_graph_optimize,
 };
 
 static ggml_guid_t ggml_secda_guid(void) {
@@ -270,6 +144,17 @@ void ggml_backend_secda_set_n_threads(ggml_backend_t backend_secda,
 
   ggml_secda_context *ctx = (ggml_secda_context *)backend_secda->context;
   ctx->n_threads = n_threads;
+}
+
+// Standalone (uid 0) graphs are planned on compute unless this is off; a perf
+// harness turns it off around its warm-up (reached through
+// ggml_backend_reg_get_proc_address, "ggml_backend_secda_set_auto_plan").
+void ggml_backend_secda_set_auto_plan(ggml_backend_t backend_secda,
+                                      bool enable) {
+  GGML_ASSERT(ggml_backend_is_secda(backend_secda));
+
+  ggml_secda_context *ctx = (ggml_secda_context *)backend_secda->context;
+  ctx->planner.auto_plan = enable;
 }
 
 // ************************************* //
@@ -542,6 +427,9 @@ static void *ggml_secda_get_proc_address(ggml_backend_reg_t reg,
                                          const char *name) {
   if (std::strcmp(name, "ggml_backend_set_n_threads") == 0) {
     return (void *)ggml_backend_secda_set_n_threads;
+  }
+  if (std::strcmp(name, "ggml_backend_secda_set_auto_plan") == 0) {
+    return (void *)ggml_backend_secda_set_auto_plan;
   }
   return NULL;
 

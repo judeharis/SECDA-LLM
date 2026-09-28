@@ -23,8 +23,6 @@
 #include <fstream>
 #include <iostream>
 
-bool load = true;
-int file_counter = 0;
 
 bool preload_weights_alloc(unsigned wgt_size, int layer, int M, int K,
                            const void *wgt, int wgt_type) {

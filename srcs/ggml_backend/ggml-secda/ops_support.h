@@ -6,6 +6,16 @@
 
 #include "ggml-impl.h"
 #include "ggml-secda.h"
+#include "secda_planner.h"
+
+#include <memory>
+
+struct ggml_secda_context {
+  int n_threads = 1;
+  std::unique_ptr<char[]> work_data;
+  size_t work_size = 0;
+  secda_planner_state planner;
+};
 
 // #define GGML_COMMON_DECL_C
 #include "ggml-quants.h"

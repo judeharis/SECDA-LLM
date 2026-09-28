@@ -119,7 +119,6 @@ if (GGML_SECDA)
         list(APPEND GGML_CDEF_PUBLIC GGML_SECDA_ARM)
     endif()
 
-    set(GGML_HEADERS_SECDA ../include/ggml-secda.h)
     file(GLOB GGML_SOURCES_SECDA "*.cpp")
     file(GLOB GGML_HEADERS_SECDA "*.h")
 
@@ -132,6 +131,12 @@ if (GGML_SECDA)
         ${SECDA_CORE_INCLUDES}
     )
     target_link_directories(ggml-secda PRIVATE ${GGML_SECDA_ACC})
+    # Export ggml-secda.h (SECDA-LLM/srcs/ggml_backend) to ggml's own sources
+    # (ggml-backend-reg.cpp includes it), so llama.cpp needs no header link.
+    # REALPATH: this directory is reached through llama.cpp's ggml/src/ggml-secda symlink.
+    get_filename_component(_secda_real "${CMAKE_CURRENT_SOURCE_DIR}" REALPATH)
+    get_filename_component(_secda_hdr "${_secda_real}" DIRECTORY)
+    target_include_directories(ggml-secda PUBLIC $<BUILD_INTERFACE:${_secda_hdr}>)
     message(STATUS "===================GGML_SECDA====================")
 endif()
 

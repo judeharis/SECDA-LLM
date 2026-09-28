@@ -119,8 +119,7 @@
         "CMAKE_CXX_COMPILER": "/usr/bin/clang++",
         "CMAKE_BUILD_TYPE": "Debug",
         "SECDA_LLM_ENABLE_SECDA": "OFF",
-        "GGML_SECDA": "OFF",
-        "GGML_PERF": "ON"
+        "GGML_SECDA": "OFF"
       }
     },
     {
@@ -139,8 +138,7 @@
         "SECDA_QK5": "ON",
         "SECDA_QK6": "ON",
         "SECDA_BFPP_ACC_V3": "ON",
-        "ACC_PRELOAD": "ON",
-        "GGML_PERF": "ON"
+        "ACC_PRELOAD": "ON"
       }
     },
     {
@@ -167,8 +165,7 @@
         "SECDA_QK5": "ON",
         "SECDA_QK6": "ON",
         "SECDA_BFPP_ACC_V4": "ON",
-        "ACC_PRELOAD": "ON",
-        "GGML_PERF": "ON"
+        "ACC_PRELOAD": "ON"
       }
     },
     {
