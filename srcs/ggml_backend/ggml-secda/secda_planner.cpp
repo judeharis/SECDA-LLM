@@ -95,6 +95,10 @@ static struct {
 // spans.
 static void secda_plan_spans(ggml_backend_t backend, const secda_span *spans,
                              int n_spans, bool record_mirror) {
+  // resetPlan_T() does not move the driver's layer counter, so a mirror that
+  // was tracking keeps its position across the replan.
+  const bool mirror_was_active = g_mirror.active;
+  const int mirror_prev = g_mirror.pos;
   if (record_mirror) g_mirror.ordinal_of.clear();
   secda_plan.reset();
   resetPlan_T();
@@ -178,8 +182,14 @@ static void secda_plan_spans(ggml_backend_t backend, const secda_span *spans,
   secda_plan.planned = true;
   secda_plan.plan_counter++;
   if (record_mirror) {
+    // After a complete evaluation the driver's counter has wrapped to 0; a
+    // non-zero position means an earlier evaluation stopped part-way (abort,
+    // eval-callback early exit) and the driver starts this plan off-layer.
+    if (mirror_was_active && mirror_prev != 0)
+      std::cerr << "SECDA WARNING: layer desync: driver layer counter at "
+                << mirror_prev << " when a new plan starts" << std::endl;
     g_mirror.supported = secda_plan.supported_nodes;
-    g_mirror.pos = 0;
+    g_mirror.pos = mirror_was_active ? mirror_prev : 0;
     g_mirror.warned = false;
   }
 }
@@ -243,9 +253,10 @@ void secda_planner_resolve(ggml_backend_t backend, secda_planner_state &st,
       g_owner.key = pass.id;
       g_sticky.active = false;
     } else if (k == pass.first && g->nodes == pass.splits[k].nodes) {
-      // Once per evaluation of a reused graph.
+      // Once per evaluation of a reused graph. The mirror is not reset: like
+      // the driver's counter it wraps at supported_nodes, so a non-zero
+      // position here is a desync carried over from an incomplete evaluation.
       secda_plan.plan_reused++;
-      g_mirror.pos = 0;
     }
     g_mirror.active = true;
     return;
