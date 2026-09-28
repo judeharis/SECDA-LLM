@@ -12,6 +12,7 @@ void ACCNAME::Weight_Transfer_A() {
 #pragma HLS unroll
       vars.wgt1_write(d, i);
     }
+    DWAIT(SCHED_BFP_Acc_Weight_Transfer_A_L1);
   }
 }
 
@@ -26,6 +27,7 @@ void ACCNAME::Weight_Transfer_B() {
 #pragma HLS unroll
       vars.wgt2_write(d, i);
     }
+    DWAIT(SCHED_BFP_Acc_Weight_Transfer_B_L1);
   }
 }
 
@@ -40,6 +42,7 @@ void ACCNAME::Weight_Transfer_C() {
 #pragma HLS unroll
       vars.wgt3_write(d, i);
     }
+    DWAIT(SCHED_BFP_Acc_Weight_Transfer_C_L1);
   }
 }
 
@@ -54,6 +57,7 @@ void ACCNAME::Weight_Transfer_D() {
 #pragma HLS unroll
       vars.wgt4_write(d, i);
     }
+    DWAIT(SCHED_BFP_Acc_Weight_Transfer_D_L1);
   }
 }
 
@@ -70,6 +74,7 @@ void ACCNAME::WeightLoader_A() {
       sc_uint<32> val = din1.read().data.to_uint();
       d.data = val;
       glb_wf_1.write(d);
+      DWAIT(SCHED_BFP_Acc_WeightLoader_A_L1_1);
     }
     weightloader_A.write(false);
     wait();
@@ -89,6 +94,7 @@ void ACCNAME::WeightLoader_B() {
       sc_uint<32> val = din2.read().data.to_uint();
       d.data = val;
       glb_wf_2.write(d);
+      DWAIT(SCHED_BFP_Acc_WeightLoader_B_L1_1);
     }
     weightloader_B.write(false);
     wait();
@@ -108,6 +114,7 @@ void ACCNAME::WeightLoader_C() {
       sc_uint<32> val = din3.read().data.to_uint();
       d.data = val;
       glb_wf_3.write(d);
+      DWAIT(SCHED_BFP_Acc_WeightLoader_C_L1_1);
     }
     weightloader_C.write(false);
     wait();
@@ -127,6 +134,7 @@ void ACCNAME::WeightLoader_D() {
       sc_uint<32> val = din4.read().data.to_uint();
       d.data = val;
       glb_wf_4.write(d);
+      DWAIT(SCHED_BFP_Acc_WeightLoader_D_L1_1);
     }
     weightloader_D.write(false);
     wait();
@@ -174,6 +182,7 @@ void ACCNAME::Load_Unit() {
             vars.inp_write(d, i);
           }
         }
+        DWAIT(SCHED_BFP_Acc_Load_Unit_L1_1);
       }
     }
     wait();

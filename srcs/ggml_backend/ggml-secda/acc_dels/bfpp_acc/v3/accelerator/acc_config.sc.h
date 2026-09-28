@@ -247,6 +247,9 @@ typedef struct {
 #include "secda-core/secda_profiler/profiler.h"
 #define DWAIT(x) wait(x)
 
+// Loop timing recovered from the HLS schedule; see sched_sync.py.
+#include "acc_schedule.h"
+
 #ifdef VERBOSE_ACC
 #define ALOG(x) std::cout << x << std::endl
 #else // !VERBOSE_ACC

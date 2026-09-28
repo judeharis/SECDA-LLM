@@ -103,6 +103,7 @@ void ACCNAME::Softmax_Unit() {
 #pragma HLS pipeline II = 1
       float v = softmax_bits_to_float(din1.read().data.to_uint());
       softmax_row[i] = v * scale;
+      DWAIT(SCHED_BFP_Acc_Softmax_Unit_L1_1);
     }
 
     // Optional: read tile_len mask values, add slope*mask.
@@ -113,6 +114,7 @@ void ACCNAME::Softmax_Unit() {
         float mv = mask_f16 ? softmax_fp16_to_fp32(raw.range(15, 0))
                              : softmax_bits_to_float(raw.to_uint());
         softmax_row[i] += slope * mv;
+        DWAIT(SCHED_BFP_Acc_Softmax_Unit_L1_2);
       }
     }
 
@@ -132,6 +134,7 @@ void ACCNAME::Softmax_Unit() {
 #pragma HLS pipeline II = 1
         tile_sum += (double)BFP_EXPF(softmax_row[i] - new_max);
         wait();
+        DWAIT(SCHED_BFP_Acc_Softmax_Unit_L1_4);
       }
       // Rescale the running sum to the new max before folding in this
       // tile's contribution - the standard online-softmax identity. On the
@@ -166,6 +169,7 @@ void ACCNAME::Softmax_Unit() {
         d.data = softmax_float_to_bits(e * sm_recip);
         d.tlast = (i == tile_len - 1);
         dout1.write(d);
+        DWAIT(SCHED_BFP_Acc_Softmax_Unit_L1_5);
       }
     }
 

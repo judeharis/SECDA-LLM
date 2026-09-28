@@ -48,6 +48,7 @@ void BFPP_UNIT::LoadInputs() {
         i_qs[ib][i + 1] = qs_y.range(15, 8);
         i_qs[ib][i + 2] = qs_y.range(23, 16);
         i_qs[ib][i + 3] = qs_y.range(31, 24);
+        DWAIT(SCHED_BFPP_UNIT_LoadInputs_L1_1_1);
       }
       SIGWRITE(inplS, 5);
       DWAIT(1);
@@ -56,6 +57,7 @@ void BFPP_UNIT::LoadInputs() {
         sc_uint<32> bsums = inp_fifo.read().data.to_uint();
         i_bsums[ib][i] = bsums.range(15, 0);
         i_bsums[ib][i + 1] = bsums.range(31, 16);
+        DWAIT(SCHED_BFPP_UNIT_LoadInputs_L1_1_2);
       }
       SIGWRITE(inplS, 6);
       DWAIT(1);
@@ -97,6 +99,7 @@ void BFPP_UNIT::Compute() {
           f1 = vec_dot(m_idx++, n_idx + k);
           acc_sumf += f1;
           wait();
+          DWAIT(SCHED_BFPP_UNIT_Compute_L1_1_1);
         }
         int *fout = reinterpret_cast<int *>(&acc_sumf);
         d1.data = fout[0];

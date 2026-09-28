@@ -213,6 +213,7 @@ void BFPP_UNIT::weight_mapper4x(int wb, unsigned int l1, unsigned int l2,
         if (run_C) w_hmask[wb + 2][i + k] = hmaskC.range(k, k);
         if (run_D) w_hmask[wb + 3][i + k] = hmaskD.range(k, k);
       }
+      DWAIT(SCHED_BFPP_UNIT_LoadWeights_loop_A);
     }
   }
 #endif
@@ -280,6 +281,7 @@ void BFPP_UNIT::weight_mapper4x(int wb, unsigned int l1, unsigned int l2,
                 qsD.range(j * 8 + 7, j * 8 + 6);
         }
       }
+      DWAIT(SCHED_BFPP_UNIT_LoadWeights_loop_B);
     }
   }
 #endif
@@ -354,6 +356,7 @@ void BFPP_UNIT::weight_mapper4x(int wb, unsigned int l1, unsigned int l2,
                 qsD.range(j * 8 + 7, j * 8 + 6);
         }
       }
+      DWAIT(SCHED_BFPP_UNIT_LoadWeights_loop_C);
     }
   }
 #endif
@@ -392,6 +395,7 @@ void BFPP_UNIT::weight_mapper4x(int wb, unsigned int l1, unsigned int l2,
       if (run_D) w_scales[wb + 3][i + 1] = scalesD.range(16, 8);
       if (run_D) w_scales[wb + 3][i + 2] = scalesD.range(24, 16);
       if (run_D) w_scales[wb + 3][i + 3] = scalesD.range(31, 24);
+      DWAIT(SCHED_BFPP_UNIT_LoadWeights_loop_D);
     }
   }
 #endif
@@ -424,6 +428,7 @@ void BFPP_UNIT::weight_mapper4x(int wb, unsigned int l1, unsigned int l2,
         if (run_C) w_qs[wb + 2][i * 4 + j] = qsC.range((j + 1) * 2 - 1, j * 2);
         if (run_D) w_qs[wb + 3][i * 4 + j] = qsD.range((j + 1) * 2 - 1, j * 2);
       }
+      DWAIT(SCHED_BFPP_UNIT_LoadWeights_loop_E);
     }
   }
 
@@ -471,6 +476,7 @@ void BFPP_UNIT::weight_mapper4x(int wb, unsigned int l1, unsigned int l2,
         w_scales[wb + 3][i * 4 + 2] = scalesD.range(2 * 8 + 7, 2 * 8);
         w_scales[wb + 3][i * 4 + 3] = scalesD.range(3 * 8 + 7, 3 * 8);
       }
+      DWAIT(SCHED_BFPP_UNIT_LoadWeights_loop_G);
     }
     sc_uint<32> dataA;
     sc_uint<32> dataB;

@@ -155,7 +155,9 @@ void MM(acc_container *drv) {
   }
 
 #ifdef DELEGATE_VERBOSE
-  int compute_cycles = drv->hwc->get_cycle_count(3);
+  // HWC_X1_Compute in state 2: the BFPP unit computing (was Scheduler at 31,
+  // a one-cycle handshake per tile).
+  int compute_cycles = drv->hwc->get_cycle_count(12);
   int weight_transfer_cycles = drv->hwc->get_cycle_count(1);
   unsigned long long compute_time_ns = (compute_cycles * 5);
   unsigned long long weight_transfer_time_ns = (weight_transfer_cycles * 5);
@@ -260,7 +262,9 @@ static void EntryMM(const void *wgt, const void *inp, void *out, int M, int N,
   SYSC_ON(drv->profile->saveProfile(drv->acc->profiling_vars));
   prf_end(1, a_t->driver_total); // Stop profiling the driver
 
-  int compute_cycles = drv->hwc->get_cycle_count(3);
+  // HWC_X1_Compute in state 2: the BFPP unit computing (was Scheduler at 31,
+  // a one-cycle handshake per tile).
+  int compute_cycles = drv->hwc->get_cycle_count(12);
   int weight_transfer_cycles = drv->hwc->get_cycle_count(1);
   drv->a_t->fpga_compute_cycles += duration_ns(compute_cycles * 5);
   drv->a_t->fpga_weight_transfer_cycles +=

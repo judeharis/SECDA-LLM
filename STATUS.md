@@ -50,7 +50,7 @@ and v3 was mid-restructure.
 | Backend | Plans weight preloads from the scheduler's `graph_optimize` calls (`secda_planner.{h,cpp}`), with no llama.cpp hook. |
 | Tools | `secda-test-backend-ops`, `secda-llama-bench` and `secda-llama-cli` are built from upstream sources plus `srcs/tools/patches`. `compile_send_kria.sh` deploys them under the old board names. |
 | SECDA-Core | `third_party/secda_core` is pinned at `551f407`. Inside SECDA-DS the suite's `SECDA-Core/` is used instead. |
-| Bitstreams | `hardware_automation/bitstreams/KRIA/BFPP_ACC_KRIA_{3,4}_0.{bit,hwh}` exist on this machine only: they are gitignored, not tracked. That departs from the migration plan's Phase 4 (see Open items). |
+| Bitstreams | `hardware_automation/bitstreams/KRIA/BFPP_ACC_KRIA_{3,4}_0.{bit,hwh}` and `CPU_1_0.{bit,hwh}`, tracked (force-added). |
 | Z1 / armv7 | The `SECDA-armv7-debug` preset is kept but has not been built since the v6 port. The Z1 is out of scope: LLM weights don't fit its 128 MB CMA. |
 
 ---
@@ -135,18 +135,16 @@ The actionable follow-ups are in [TODO.md](TODO.md).
   seen in perplexity. So on the board, tokens are checked against simulation.
 - **SECDA-Core tooling for CMake (optional).** `./secda build`, `list` and
   `gen-vscode` still call Bazel.
-  - `hw-gen` and the HLS/HLX builds ran through SECDA-Core for both designs.
-  - `sched-sync` fails (next item).
-  - `load` and `run-on-board --bin` have not been tried on this repo. The board
-    tests loaded bitstreams with `load_bitstream.py`.
-- **`sched-sync` fails on bfpp_acc v3 and v4.** SECDA-Core's schedule cross-check
-  rejects both HLS runs with "BFPP_UNIT_LoadWeights Loop 1.1: own overhead computes
-  as -10 cycles" (`hardware_automation/generated/BFPP_ACC_KRIA_{3,4}_0/sched_apply_1.log`).
-  So there is no `acc_schedule.h`, and the simulation's `DWAIT` timing is not synced
-  to HLS. The plan made sched-sync optional.
-- **Monitor target states.** Only monitors 0-4 have target states (v4 also 13,
-  `Softmax_Unit`). For 5-12, set target states or document why they have none.
-  This is the migration plan's Phase 2 item.
+  `hw-gen`, the HLS/HLX builds, `sched-sync`, `load` and `run-on-board --bin`
+  all work for this repo (TODO section 3).
+- **Simulated timing is now synced to HLS** (TODO 3.1). Simulated compute is 16x
+  what it was: HLS takes 15 cycles per `vec_dot`, where simulation used 1. Before
+  that, the board's run of the section 3 changes has to be re-done (TODO 3.5,
+  `kriaB_L` went down). Weight transfer is 10x slower on the board than in
+  simulation (388 vs 38 µs for the MUL_MAT tests), which is not explained yet.
+- **Monitors 4-11 aren't busy counters.** `Weight_Transfer_A-D` never leave
+  their busy state after the first weight; `WeightLoader_A-D` never report one.
+  Left as they are: fixing them needs a bitstream rebuild (TODO 3.2).
 - **The benchmark suite can't run the new builds yet.** None of the migration's
   board tests used it. Before the first suite run:
   - **Runtime entries.** The configs name pre-migration bitstreams, e.g.
@@ -160,19 +158,16 @@ The actionable follow-ups are in [TODO.md](TODO.md).
   - **Root.** The suite starts the run scripts over ssh as `board_user` (`ubuntu`)
     without sudo. The scripts load bitstreams, write `/dev/u-dma-buf-mgr` and run
     the binaries without sudo, so they need root.
-- **Bitstreams are not tracked.** The migration plan's Phase 4 said to track
-  `hardware_automation/bitstreams/KRIA/*.bit`/`.hwh`, plus the KV260 CPU reset
-  bitstream, as SECDA-Sandboxed does.
-  - The board-tested pairs are timing-tolerated builds, and a rebuild won't be
-    bit-identical.
+- **Bitstreams are tracked** (TODO 3.3), force-added past the `.gitignore`
+  pattern as SECDA-Sandboxed does. They are timing-tolerated builds, and a
+  rebuild won't be bit-identical.
   - md5 of the pairs:
     - `BFPP_ACC_KRIA_3_0`: `.bit` `cac1729e940a7cd8e3f04f315d7bc60e`, `.hwh`
       `35c8cdcae15cfcc15b0104534f0d3dd4`;
     - `BFPP_ACC_KRIA_4_0`: `.bit` `86ca50aa85185c5e109f8728000ab8a2`, `.hwh`
       `4100a5471843759366b5ff9540cbee97`.
-  - The CPU reset pair used on the board is SECDA-Sandboxed's tracked `CPU_1_0`
-    (same md5).
-  - Either track all three pairs, or say here why they stay untracked.
+  - `CPU_1_0` is a copy of SECDA-Sandboxed's reset pair (`.bit`
+    `ba1345689058644eaa950d167e1cdd25`), the one used on the board.
 - **Explicit layers don't replan.** A planned MUL_MAT whose weights moved since
   planning is sent with the call, with a warning, rather than replanned (TODO
   2.2). Nothing in llama.cpp's current flow moves weights between plans.

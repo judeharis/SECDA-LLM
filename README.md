@@ -227,6 +227,13 @@ When its build gates pass, `run.sh` copies the pair to
 `hardware_automation/bitstreams/KRIA/BFPP_ACC_KRIA_3_0.{bit,hwh}`. Its timing gate
 refuses any negative WNS.
 
+After HLS, `run.sh` also syncs the simulation's timing to the HLS schedule
+(SECDA-Core `sched_sync.py`). By default (`SECDA_SCHED_SYNC=apply`) it rewrites
+the `DWAIT` arguments in the accelerator source and the generated
+`accelerator/acc_schedule.h`, and resynthesises until nothing changes. The
+hardware is unaffected, but the simulated cycle counts change. Use
+`SECDA_SCHED_SYNC=report` to leave the source alone.
+
 The current v3 and v4 builds missed setup by 0.307 and 0.217 ns at 200 MHz. Under
 the SECDA-DS 30% rule, their pairs were copied by hand from
 `generated/<TAG>/generated_files/` (see `test_status.json`).
@@ -270,11 +277,14 @@ So it stops with "Error: board_port must be numeric" before it builds anything.
     `Overlay` wrapper. The run scripts expect it at `~/load_bitstream.py` on the
     board. SECDA-LLM doesn't ship it; SECDA-TFLite's `scripts/load_bitstream.py` is
     the same file.
-  - `./secda load bfpp_acc/v3` is meant to check the driver's addresses against the
-    `.hwh`, deploy the pair and load it. It has not been tried on this repo yet.
-  - After a run, reset the board to a CPU-only bitstream. SECDA-LLM has none of its
-    own. The migration used SECDA-Sandboxed's tracked
-    `hardware_automation/bitstreams/KRIA/CPU_1_0.{bit,hwh}`.
+  - `./secda load bfpp_acc/v3` checks the driver's addresses against the `.hwh`,
+    deploys the pair and loads it, leaving it loaded.
+  - `./secda run-on-board bfpp_acc/v3 --bin <binary> --deploy <bin dir>:bins
+    --env LD_LIBRARY_PATH=bins -- <args>` loads, runs, collects the output under
+    `hardware_automation/results/` and resets the board. Add `--check "<cmd>"` for
+    a PASS/FAIL verdict.
+  - After a run, reset the board to the CPU-only `CPU_1_0` pair (tracked in
+    `hardware_automation/bitstreams/KRIA/`, copied from SECDA-Sandboxed).
 - **Run the binaries as root**, with `LD_LIBRARY_PATH` pointing at the deployed
   `bin/`: `sudo env LD_LIBRARY_PATH=${PWD}/bin ./<binary> ...`.
   - The run scripts in `benchmark/scripts/` call the binaries directly with

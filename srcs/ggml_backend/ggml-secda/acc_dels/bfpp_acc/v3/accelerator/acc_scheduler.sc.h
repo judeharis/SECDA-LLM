@@ -61,6 +61,7 @@ void ACCNAME::Scheduler() {
     HWC_SIG(Scheduler, 4);
     schedule.write(0);
     wait();
+    DWAIT(SCHED_BFP_Acc_Scheduler_L1);
   }
 }
 

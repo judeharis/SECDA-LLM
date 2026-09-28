@@ -1,5 +1,28 @@
 # bfpp_acc/v4 — changes
 
+## 2026-09-28 — simulated timing synced to HLS; monitor targets; fpga_compute_cycles
+
+**Why.** SECDA-Core's `sched-sync` refused this design (a false error, fixed in
+SECDA-Core `48da6eb`), so the simulation's `DWAIT` timing had never been checked
+against HLS. `prf.csv`'s `fpga_compute_cycles` read the Scheduler monitor at
+state 31, a one-cycle handshake, and monitors 5-7 and 12 had no target state.
+
+| Where | Change |
+|---|---|
+| `accelerator/*.sc.h`, `accelerator/acc_softmax_unit.sc.h` | `sched_sync.py --apply` (converged on pass 2): 23 `DWAIT(SCHED_...)` sites; generated `accelerator/acc_schedule.h` and `acc_schedule.json`, included from `acc_config.sc.h`. Erased under `__SYNTHESIS__`: the hardware is unchanged |
+| `driver*/driver_interface.h` | target states: `Weight_Transfer_B-D` 1, `HWC_X1_Compute` 2 (computing) |
+| `driver*/acc_driver.h` | `fpga_compute_cycles` = `HWC_X1_Compute` (monitor 12), was the Scheduler (monitor 3) |
+
+**Effect.** Simulated compute is about 16x what it was: HLS takes 15 cycles per
+`vec_dot` iteration, where simulation used 1 (a `llama-cli -n 4` run's
+`HWC_X1_Compute` went from 3.8M to 61.2M cycles). `fpga_compute_cycles` in
+`prf.csv` is not comparable with earlier runs.
+
+**Verified.** Simulation: the gate suite differs from its previous baseline only
+in `fpga_compute_cycles`/`fpga_weight_transfer_cycles` (pass counts, perplexity,
+generated text and warnings identical), and was re-baselined. KV260: pending
+(SECDA-LLM TODO 3.5).
+
 ## 2026-09-28 — explicit MUL_MAT layers (driver hygiene)
 
 **Why.** With `-fa off`, SOFT_MAX nodes run on SECDA between the MUL_MATs. The

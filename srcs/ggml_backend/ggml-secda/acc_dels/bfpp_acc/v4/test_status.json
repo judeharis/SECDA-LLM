@@ -87,6 +87,15 @@
         "commit": "7676cdf",
         "source": "manual",
         "notes": "Explicit MUL_MAT layers on kriaB_L (test_0928f, checksummed; bitstream unchanged). driver and driver_batches: MUL_MAT 51/51 and 55/55, SOFT_MAX 212/212 and 212/212; -b 16 -ub 16 perplexity 3.3636 +/- 0.60469 (30/30 preloaded), unchanged; secda-llama-cli text with flash attention auto and -fa off (60 SECDA nodes: 30 MUL_MAT + 30 SOFT_MAX) identical to the board CPU-only build's -fa off text and to the x86 CPU; no SECDA WARNING, no NaN, no u-dma-buf left."
+      },
+      {
+        "level": "builds_sim",
+        "outcome": "pass",
+        "target": "sysc",
+        "date": "2026-09-28",
+        "commit": "b75bd93",
+        "source": "manual",
+        "notes": "sched-sync applied (23 DWAIT sites, acc_schedule.h; converged on pass 2, SECDA-Core 48da6eb), monitor targets 5-7=1 and 12=2, fpga_compute_cycles from HWC_X1_Compute; committed alongside this record. Gate suite vs its previous baseline: only fpga_compute_cycles / fpga_weight_transfer_cycles differ (16 of 68 checks); pass counts, perplexity, text and warnings identical; re-baselined. test-backend-ops MUL_MAT 51/51."
       }
     ]
   }

@@ -224,7 +224,15 @@ static void initACC() {
     drv->hwc->set_target_state(1, 4);  // Load_Unit
     drv->hwc->set_target_state(2, 1);  // Store_Unit
     drv->hwc->set_target_state(3, 31); // Scheduler
-    drv->hwc->set_target_state(4, 1);  // Weight_Transfer
+    drv->hwc->set_target_state(4, 1);  // Weight_Transfer_A
+    drv->hwc->set_target_state(5, 1);  // Weight_Transfer_B
+    drv->hwc->set_target_state(6, 1);  // Weight_Transfer_C
+    drv->hwc->set_target_state(7, 1);  // Weight_Transfer_D
+    // Weight_Transfer_A-D enter state 1 at their first weight and never leave
+    // it, so they count cycles since the first transfer, not busy cycles.
+    // WeightLoader_A-D (8-11) only ever report state 0: no target is useful
+    // until the design gives them a busy state.
+    drv->hwc->set_target_state(12, 2); // HWC_X1_Compute: computeS 2, computing
     drv->hwc->set_target_state(13, 1); // Softmax_Unit  // Jude: Added
     drv->hwc->reset_hwc();             // Reset HWC
     // Counter names, in register order (the HWC_CTHREAD / HWC_Bind_Signals

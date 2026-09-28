@@ -99,31 +99,59 @@ These bugs were kept for parity during the migration (minimal-fork spec §6, ris
 
 ## 3. Hardware flow
 
-- [ ] **3.1 `sched-sync` fails on v3 and v4.** The error is "BFPP_UNIT_LoadWeights
-      Loop 1.1: own overhead computes as -10 cycles (span 27, nested 37)", in
-      `hardware_automation/generated/BFPP_ACC_KRIA_{3,4}_0/sched_apply_1.log`.
-      - Decide first whether SECDA-Core's cross-check misreads the HLS report (nested >
-        span points to a pipelined or flattened child loop) or the design's loop
-        structure is at fault.
-      - If it is the check, fix it in `SECDA-DS/SECDA-Core` on `main`.
-      - *Done when:* `acc_schedule.h` is generated for both designs and the gate
-        suite still passes.
-- [ ] **3.2 Monitor target states.** Only monitors 0-4 have target states (v4 also
-      13, `Softmax_Unit`). Set targets for 5-12 in `D/v{3,4}/accelerator/acc.sc.h` or
-      document why they have none; for example, `HWC_X1_Compute` reads 0 on the
-      board. This is the migration plan's Phase 2 item.
-      - It needs a bitstream rebuild if the monitors change (at most 2 HLS and 2 HLX
-        runs at once).
-      - Re-test on the board afterwards.
-- [ ] **3.3 Track the bitstreams.** The plan's Phase 4 asked for it, and Sandboxed
-      does it. Track `hardware_automation/bitstreams/KRIA/BFPP_ACC_KRIA_{3,4}_0.{bit,hwh}`,
-      plus the KV260 `CPU_1_0` reset pair, with a `.gitignore` exception.
-      - The pairs are timing-tolerated builds that can't be reproduced bit for bit.
-        Their md5s are in STATUS.md.
-      - Alternatively, write down why they stay untracked.
-- [ ] **3.4 Try `./secda load` and `run-on-board --bin` on this repo.** The board
-      tests used `load_bitstream.py`. They need `secda_init_path` and `bitstream_dir`
-      set in `config.json`.
+- [x] **3.1 `sched-sync` on v3 and v4.** Done 2026-09-28.
+      - **Cause:** SECDA-Core's cross-check, not the design. `LoadWeights` Loop
+        1.1's six nested loops (`loop_A`-`loop_G`, one per weight type) sit on
+        `if (wgt_types == ...)` branches. HLS schedules them into shared cycles,
+        and their summed costs (37) exceed the parent's span (27). The check
+        failed the whole design on that one loop.
+      - **SECDA-Core fix (`48da6eb`):** such a loop is now `overlapping_children`,
+        with no derivable own overhead, and is reported as unverified. Labelled
+        loop rows in the HLS report are now also checked.
+      - **Suite-wide:** of the 28 saved schedules in SECDA-DS, the 14 that failed
+        now read (bfpp_acc v3/v4, every MM2IM, FCGEMM 1/2, TCONV Z1). The 14 that
+        passed are unchanged.
+      - **Applied** (`SECDA_SCHED_SYNC=apply ./run.sh 1 0`, converged on pass 2):
+        19 `DWAIT` sites in v3 and 23 in v4, in the generated `acc_schedule.h`
+        (with `acc_schedule.json`). Loops HLS gives no single figure for
+        (`--outer`, `--variable`) were left unmodelled.
+      - **Largest change:** `BFPP_UNIT` Compute's inner loop costs 15 cycles per
+        `vec_dot` in hardware, where simulation used 1. A `llama-cli -n 4` run's
+        `HWC_X1_Compute` went from 3.8M to 61.2M cycles.
+      - **Gate suite:** re-baselined; the old baseline is kept as
+        `step0_pre_sched_sync`. Against the old baseline, only
+        `fpga_compute_cycles`/`fpga_weight_transfer_cycles` differ (16 checks);
+        pass counts, perplexity, text and warnings are identical.
+- [x] **3.2 Monitor target states.** Driver-only, done 2026-09-28:
+      - `Weight_Transfer_B-D` (5-7) now target 1, like A;
+      - `HWC_X1_Compute` (12) targets 2 (`computeS` computing) and now reads real
+        compute cycles;
+      - `prf.csv`'s `fpga_compute_cycles` reads it instead of the Scheduler at
+        state 31, a one-cycle handshake (1,200 cycles for a whole run).
+      - **Left as they are (owner's call):** `Weight_Transfer_A-D` enter state 1
+        at their first weight and never leave it, so they count cycles since then.
+        `WeightLoader_A-D` (8-11) only ever report state 0. Making either
+        meaningful needs `HWC_SIG` busy/idle writes and a bitstream rebuild.
+- [x] **3.3 Bitstreams tracked**: `BFPP_ACC_KRIA_{3,4}_0.{bit,hwh}` and the
+      `CPU_1_0` reset pair (a copy of SECDA-Sandboxed's), force-added past the
+      `.gitignore` pattern as Sandboxed does. The md5s are in STATUS.md.
+- [x] **3.4 `./secda load` and `run-on-board --bin` work on this repo.**
+      2026-09-28 on `kriaB_L`:
+      - `./secda load bfpp_acc/v3` checked the six addresses against the `.hwh`,
+        deployed the pair and loaded it;
+      - `./secda run-on-board bfpp_acc/v3 --bin <secda-test-backend-ops>
+        --deploy <bins>:bins --env LD_LIBRARY_PATH=bins --check "grep -q '51/51
+        tests passed'" -- test -b SECDA -o MUL_MAT` passed, reset the board to
+        `CPU_1_0`, and left no u-dma-buf.
+- [ ] **3.5 Board re-check of the section 3 driver changes** (new monitor
+      targets, `fpga_compute_cycles` from `HWC_X1_Compute`). The 2026-09-28 run on
+      `kriaB_L` failed intermittently with `cma_alloc: alloc failed`, then the
+      board stopped responding.
+      - Re-run `test_0928g/run_g.sh` for all four variants after a reboot.
+      - Also compare the board's `HWC_X1_Compute` for `llama-cli -n 4 "what is my
+        name?"` with simulation's 61.2M cycles (`/tmp/prof2_*`).
+      - **Open question:** weight transfer took 38 µs in simulation but 388 µs on
+        the board for the 51 MUL_MAT tests (`fpga_weight_transfer_cycles`).
 
 ## 4. Benchmark suite (can't run the new builds today)
 
