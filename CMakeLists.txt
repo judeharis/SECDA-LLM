@@ -58,10 +58,10 @@ if (SECDA_LLM_ENABLE_SECDA)
 	endif()
 
 
-	if (NOT EXISTS "${SECDA_LLM_LLAMA_DIR}/ggml/include/ggml-secda.h")
-		message(FATAL_ERROR
-			"GGML_SECDA is enabled, but ggml-secda.h is missing from llama.cpp/ggml/include. "
-			"Run ./setup.sh from the repository root and re-configure.")
+	if (GGML_BACKEND_DL)
+		# The fork registers SECDA statically (ggml-backend-reg.cpp); with dynamic
+		# backends it would be built but never loaded.
+		message(FATAL_ERROR "The SECDA backend needs GGML_BACKEND_DL=OFF")
 	endif()
 
 	if (SECDA_LLM_BUILD_SECDA_CORE)

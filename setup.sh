@@ -24,12 +24,25 @@
 # replace_string_in_file "../.devcontainer/devcontainer.json" "VIVADO_2024_PATH" $vivado_2024_path
 
 
-pushd ./llama.cpp/ggml/src
-ln -s -f ../../../srcs/ggml_backend/ggml-secda/ ./ 
-popd
-pushd ./llama.cpp/ggml/include
-ln -s -f ../../../srcs/ggml_backend/ggml-secda.h ./
-popd
+# Link the SECDA backend into llama.cpp's ggml/src: the fork's
+# ggml_add_backend(SECDA) adds ggml/src/ggml-secda. The link is local to this
+# checkout (the fork doesn't track it) and is kept out of the fork's git status,
+# along with the run outputs the SECDA tools write. ggml-secda.h needs no link:
+# the ggml-secda target exports its directory.
+set -euo pipefail
+cd "$(dirname "$0")"
+top="$(git -C llama.cpp rev-parse --show-toplevel 2>/dev/null || true)"
+if [ "$top" != "$(realpath llama.cpp)" ]; then
+  echo "llama.cpp is not checked out: run 'git submodule update --init llama.cpp' first" >&2
+  exit 1
+fi
+ln -sfn ../../../srcs/ggml_backend/ggml-secda ./llama.cpp/ggml/src/ggml-secda
+rm -f ./llama.cpp/ggml/include/ggml-secda.h   # old header link, no longer used
+excl="$(cd llama.cpp && realpath -m "$(git rev-parse --git-path info/exclude)")"
+mkdir -p "$(dirname "$excl")"
+for p in /ggml/src/ggml-secda /.vscode/ /results/ tbo.csv llama_perf.csv prf.csv /_gstats/ /_plans/; do
+  grep -qxF "$p" "$excl" 2>/dev/null || echo "$p" >> "$excl"
+done
 
 
 # pushd ../tensorflow/tensorflow/lite/examples/
