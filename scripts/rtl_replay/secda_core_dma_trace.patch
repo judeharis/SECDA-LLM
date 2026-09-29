@@ -1,0 +1,45 @@
+diff --git a/secda-core/secda_integrator/axi4s_engine_generic.sc.h b/secda-core/secda_integrator/axi4s_engine_generic.sc.h
+index d964242..e19c79a 100644
+--- a/secda-core/secda_integrator/axi4s_engine_generic.sc.h
++++ b/secda-core/secda_integrator/axi4s_engine_generic.sc.h
+@@ -28,15 +28,24 @@ SC_MODULE(AXIS_ENGINE) {
+   int output_len;
+   int output_offset;
+ 
++  // TEMP (SECDA-LLM TODO 3.7): SECDA_DMA_TRACE=<file> logs every send/recv.
++  static FILE *trace() {
++    static FILE *f = getenv("SECDA_DMA_TRACE") ? fopen(getenv("SECDA_DMA_TRACE"), "w") : nullptr;
++    return f;
++  }
++  static unsigned long long cyc() { return sc_time_stamp().value() / sc_time(1, SC_NS).value(); }
++
+   void DMA_MMS2() {
+     int initial_free = din1.num_free();
+     while (1) {
+       while (!send) wait();
++      if (trace()) fprintf(trace(), "SEND %d %d %llu\n", id, input_len, cyc());
+       int packets_sent = 0;
+       for (int i = 0; i < input_len;) {
+         T<B> dO;
+         for (int j = 0; j < B / 32; j++) {
+           int d = DMA_input_buffer[(i++) + input_offset * (B / 32)];
++          if (trace()) fprintf(trace(), "W %d %d\n", id, d);
+           dO.range((j + 1) * 32 - 1, j * 32) = d;
+           sc_uint<32> data = dO.range((j + 1) * 32 - 1, j * 32);
+         }
+@@ -55,6 +64,7 @@ SC_MODULE(AXIS_ENGINE) {
+   void DMA_S2MM() {
+     while (1) {
+       while (!recv) wait();
++      if (trace()) fprintf(trace(), "RECV %d %d %llu\n", id, output_len, cyc());
+       bool last = false;
+       int i = 0;
+       int packets_recv = 0;
+@@ -63,6 +73,7 @@ SC_MODULE(AXIS_ENGINE) {
+         while (i >= output_len) wait();
+         packets_recv++;
+         last = d.tlast;
++        if (trace()) fprintf(trace(), "R %d %d %d %llu\n", id, d.data.range(31, 0).to_int(), (int)d.tlast, cyc());
+         for (int j = 0; j < B / 32; j++) {
+           DMA_output_buffer[(i++) + output_offset * (B / 32)] =
+               d.data.range((j + 1) * 32 - 1, j * 32).to_int();

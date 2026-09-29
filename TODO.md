@@ -174,23 +174,32 @@ These bugs were kept for parity during the migration (minimal-fork spec §6, ris
         `HWC_X1_Compute` board/sim is 1.310 (was 1.313). The gate suite changed
         only in the cycle checks and was re-baselined (the previous baseline is
         kept as `step0_pre_outer`).
-- [ ] **3.7 The last 30 cycles per output aren't in the HLS schedule.** Board
-      compute per output is `16·kb + 30` cycles: 46 for the single-tile Q2_K perf
-      case (board 117.77 µs/run vs sim 41.55) and about 126 for `llama-cli -n 4`
-      (kb = 6). HLS schedules the flattened `m`/`k` loop at II 16 with no
-      per-output cost, and simulation now models exactly that.
-      - Candidates: the `dout1.write` handshake to Store_Unit and the output
-        DMA; the loop exit and restart around it; something the report hides.
-      - **First step:** C/RTL co-simulation of the single-tile case (Vivado HLS
-        cosim). If the RTL also takes 46 cycles per output, the cost is in the
-        design and the HLS report misses it. If it takes 16, the cost is in the
-        system (AXI-Stream or DMA).
-      - **Also open:** weight transfer is 2.7x board/sim for the single Q2_K tile
-        (9.08 vs 3.39 µs/run), 1.47x for `llama-cli`, and 10x for
-        test-backend-ops' 51 tests.
-      - **Cost of the sync for the gate suite:** simulation is slower now (it
-        simulates about 16x more compute cycles), and the four-variant gate
-        suite takes about 3 hours, most of it the `-b 16` perplexity run.
+- [ ] **3.7 The last 30 cycles per output: found, fix not yet made.**
+      - **RTL replay.** On 2026-09-29, `scripts/rtl_replay` ran the packaged IP's
+        RTL in xsim on the single-tile Q2_K case. The stimulus was the exact
+        stream traffic recorded from the SystemC simulation.
+        - All 512 outputs were bit-identical to simulation.
+        - Outputs came out **46 cycles apart**, like the board: the cost is in
+          the design, not the DMA or AXI.
+      - **Cause.** HLS flattened the `n` and `m` loops into one: HLS Loop 1.1
+        maps to line 91, the `n` loop, and the `m` loop on line 92 has no HLS
+        loop of its own. So Loop 1.1 iterates once per output. Each output
+        pays the `k` pipeline's fill (depth 44, II 16), giving
+        `(kb-1)·16 + 44 + 2`: 46 for kb 1, about 126 for kb 6.
+      - **The sched-sync bug.** It charges Loop 1.1's cost
+        (`SCHED_BFPP_UNIT_Compute_L1_1` = 29) in the `n` loop's body, i.e.
+        once per row. For a flattened nest, the parent's `DWAIT` belongs in
+        the innermost flattened source loop (the `m` loop).
+      - **Fix to make (SECDA-Core `sysc_source`/`sched_sync`).** When source
+        loops between an HLS loop's header and its HLS child have no HLS
+        region of their own, place the `DWAIT` in the innermost of them. Then
+        re-sync v3/v4 and compare with the board again. Expected
+        `HWC_X1_Compute`: about 80M, vs the board's 80.3M.
+      - **Also open:** weight-transfer ratios (single tile 2.7x board/sim,
+        `llama-cli` 1.47x, test-backend-ops' 51 tests 10x). The same replay
+        can check them.
+      - **Gate suite cost:** since the sync, the `-b 16` perplexity runs on
+        `SECDA-sim-x64` only (`out/baseline_mf`, local).
 
 ## 4. Benchmark suite (can't run the new builds today)
 
