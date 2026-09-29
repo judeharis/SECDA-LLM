@@ -5,14 +5,42 @@
       "name": "BFPP_ACCv3_0_KRIA",
       "board": "KRIA",
       "acc_tag": "BFPP_ACC_KRIA_3_0",
-      "generated": "2026-09-28T22:28:55Z",
+      "generated": "2026-09-29T08:59:24Z",
       "loops": [
+        {
+          "constant": "SCHED_BFPP_UNIT_Compute_L1",
+          "value": 2,
+          "source_file": "src/bfp_processor_threads.sc.h",
+          "source_line": 77,
+          "loop": "Loop 1"
+        },
+        {
+          "constant": "SCHED_BFPP_UNIT_Compute_L1_1",
+          "value": 29,
+          "source_file": "src/bfp_processor_threads.sc.h",
+          "source_line": 91,
+          "loop": "Loop 1.1"
+        },
         {
           "constant": "SCHED_BFPP_UNIT_Compute_L1_1_1",
           "value": 15,
           "source_file": "src/bfp_processor_threads.sc.h",
           "source_line": 95,
           "loop": "Loop 1.1.1"
+        },
+        {
+          "constant": "SCHED_BFPP_UNIT_LoadInputs_L1",
+          "value": 2,
+          "source_file": "src/bfp_processor_threads.sc.h",
+          "source_line": 32,
+          "loop": "Loop 1"
+        },
+        {
+          "constant": "SCHED_BFPP_UNIT_LoadInputs_L1_1",
+          "value": 3,
+          "source_file": "src/bfp_processor_threads.sc.h",
+          "source_line": 37,
+          "loop": "Loop 1.1"
         },
         {
           "constant": "SCHED_BFPP_UNIT_LoadInputs_L1_1_1",
@@ -27,6 +55,13 @@
           "source_file": "src/bfp_processor_threads.sc.h",
           "source_line": 55,
           "loop": "Loop 1.1.2"
+        },
+        {
+          "constant": "SCHED_BFPP_UNIT_LoadWeights_L1",
+          "value": 2,
+          "source_file": "src/bfp_processor_threads.sc.h",
+          "source_line": 11,
+          "loop": "Loop 1"
         },
         {
           "constant": "SCHED_BFPP_UNIT_LoadWeights_loop_A",
@@ -99,11 +134,25 @@
           "loop": "Loop 1"
         },
         {
+          "constant": "SCHED_BFP_Acc_WeightLoader_A_L1",
+          "value": 2,
+          "source_file": "src/acc_load_unit.sc.h",
+          "source_line": 70,
+          "loop": "Loop 1"
+        },
+        {
           "constant": "SCHED_BFP_Acc_WeightLoader_A_L1_1",
           "value": 1,
           "source_file": "src/acc_load_unit.sc.h",
           "source_line": 72,
           "loop": "Loop 1.1"
+        },
+        {
+          "constant": "SCHED_BFP_Acc_WeightLoader_B_L1",
+          "value": 2,
+          "source_file": "src/acc_load_unit.sc.h",
+          "source_line": 90,
+          "loop": "Loop 1"
         },
         {
           "constant": "SCHED_BFP_Acc_WeightLoader_B_L1_1",
@@ -113,11 +162,25 @@
           "loop": "Loop 1.1"
         },
         {
+          "constant": "SCHED_BFP_Acc_WeightLoader_C_L1",
+          "value": 2,
+          "source_file": "src/acc_load_unit.sc.h",
+          "source_line": 110,
+          "loop": "Loop 1"
+        },
+        {
           "constant": "SCHED_BFP_Acc_WeightLoader_C_L1_1",
           "value": 1,
           "source_file": "src/acc_load_unit.sc.h",
           "source_line": 112,
           "loop": "Loop 1.1"
+        },
+        {
+          "constant": "SCHED_BFP_Acc_WeightLoader_D_L1",
+          "value": 2,
+          "source_file": "src/acc_load_unit.sc.h",
+          "source_line": 130,
+          "loop": "Loop 1"
         },
         {
           "constant": "SCHED_BFP_Acc_WeightLoader_D_L1_1",

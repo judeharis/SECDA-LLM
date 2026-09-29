@@ -140,7 +140,8 @@ The actionable follow-ups are in [TODO.md](TODO.md).
 - **Simulated timing is synced to HLS** (TODO 3.1, 3.5). HLS takes 15 cycles per
   `vec_dot`, where simulation used 1. For `llama-cli -n 4`, the board's compute
   counter is 1.31x simulation's, down from 21x before the sync; weight transfer
-  is 1.47x. The loops the sync couldn't model account for the rest (TODO 3.6).
+  is 1.47x. Everything the HLS report gives is now modelled (TODO 3.6). The rest is
+  a steady 30 cycles per output that the HLS schedule doesn't show (TODO 3.7).
 - **Monitors 4-11 aren't busy counters.** `Weight_Transfer_A-D` never leave
   their busy state after the first weight; `WeightLoader_A-D` never report one.
   Left as they are: fixing them needs a bitstream rebuild (TODO 3.2).

@@ -108,11 +108,13 @@ void BFPP_UNIT::Compute() {
       }
       n_idx += kb_l;
       m_idx = 0;
+      DWAIT(SCHED_BFPP_UNIT_Compute_L1_1);
     }
     bfpp_ready.write(1);
     bfpp_free.write(1);
     SIGWRITE(computeS, 3);
     wait();
+    DWAIT(SCHED_BFPP_UNIT_Compute_L1);
   }
 }
 

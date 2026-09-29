@@ -157,14 +157,40 @@ These bugs were kept for parity during the migration (minimal-fork spec §6, ris
         - the free-running counters about 1.41.
       - **`fpga_compute_cycles` is right on hardware:** 401,711 µs, 98% of the
         board's wall-clock compute wait (409,749 µs).
-- [ ] **3.6 (optional) Close the remaining 1.3-1.5x.** The sync modelled only the
-      loops with a fixed per-iteration figure. The `--outer` loops (e.g.
-      Load_Unit L1 12 cycles vs 4, Compute L1 4 vs 2) and the variable
-      Control_Unit loop (8~17 cycles) are still unmodelled. Try
-      `SECDA_SCHED_ARGS="--outer --variable max"` and re-compare with the board.
-      Separately, test-backend-ops' 51 MUL_MAT tests showed 38 µs of weight
-      transfer in simulation vs 388 µs on the board, where the model run's ratio
-      is 1.47.
+- [x] **3.6 Everything the HLS report gives is now modelled.** Done 2026-09-29.
+      - **SECDA-Core `ad29364`**, two model fixes, each with a test:
+        - `--variable max/min` applies to leaf loops only. On `LoadWeights` Loop 1
+          ("83 ~ 1051", nested loops included) it would have written
+          `DWAIT(1051)`.
+        - A pipelined child loop's fill/drain (latency - II) is charged to its
+          parent, once per run of the child.
+      - **Applied** with `SECDA_SCHED_ARGS="--outer --variable max"`, converged on
+        pass 2: 9 more constants in v3 and 11 in v4. The largest is
+        `SCHED_BFPP_UNIT_Compute_L1_1` = 29, per row, since HLS flattened the
+        `m` and `k` loops into one pipeline (II 16, latency 44).
+      - **Not modellable:** Control_Unit, Load_Unit and Softmax_Unit L1 have
+        waits inside conditionals; `LoadWeights` L1.1 has overlapping children.
+      - **Effect on the board comparison: 0.2%.** For `llama-cli -n 4`,
+        `HWC_X1_Compute` board/sim is 1.310 (was 1.313). The gate suite changed
+        only in the cycle checks and was re-baselined (the previous baseline is
+        kept as `step0_pre_outer`).
+- [ ] **3.7 The last 30 cycles per output aren't in the HLS schedule.** Board
+      compute per output is `16·kb + 30` cycles: 46 for the single-tile Q2_K perf
+      case (board 117.77 µs/run vs sim 41.55) and about 126 for `llama-cli -n 4`
+      (kb = 6). HLS schedules the flattened `m`/`k` loop at II 16 with no
+      per-output cost, and simulation now models exactly that.
+      - Candidates: the `dout1.write` handshake to Store_Unit and the output
+        DMA; the loop exit and restart around it; something the report hides.
+      - **First step:** C/RTL co-simulation of the single-tile case (Vivado HLS
+        cosim). If the RTL also takes 46 cycles per output, the cost is in the
+        design and the HLS report misses it. If it takes 16, the cost is in the
+        system (AXI-Stream or DMA).
+      - **Also open:** weight transfer is 2.7x board/sim for the single Q2_K tile
+        (9.08 vs 3.39 µs/run), 1.47x for `llama-cli`, and 10x for
+        test-backend-ops' 51 tests.
+      - **Cost of the sync for the gate suite:** simulation is slower now (it
+        simulates about 16x more compute cycles), and the four-variant gate
+        suite takes about 3 hours, most of it the `-b 16` perplexity run.
 
 ## 4. Benchmark suite (can't run the new builds today)
 

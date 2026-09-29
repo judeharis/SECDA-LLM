@@ -18,17 +18,22 @@
 #if defined(KRIA)
 #define SECDA_HW_VARIANT_BFPP_ACCv3_0_KRIA
 #else
-// Simulation default: BFPP_ACCv3_0_KRIA (from BFPP_ACC_KRIA_3_0, 2026-09-28T22:28:55Z).
+// Simulation default: BFPP_ACCv3_0_KRIA (from BFPP_ACC_KRIA_3_0, 2026-09-29T08:59:24Z).
 // The SystemC build defines no board, so it models this one.
 #define SECDA_HW_VARIANT_BFPP_ACCv3_0_KRIA
 #endif
 #endif
 
 #if defined(SECDA_HW_VARIANT_BFPP_ACCv3_0_KRIA)
-// BFPP_ACCv3_0_KRIA, from BFPP_ACC_KRIA_3_0 (2026-09-28T22:28:55Z)
+// BFPP_ACCv3_0_KRIA, from BFPP_ACC_KRIA_3_0 (2026-09-29T08:59:24Z)
+#define SCHED_BFPP_UNIT_Compute_L1 2 // bfp_processor_threads.sc.h:77 Loop 1
+#define SCHED_BFPP_UNIT_Compute_L1_1 29 // bfp_processor_threads.sc.h:91 Loop 1.1
 #define SCHED_BFPP_UNIT_Compute_L1_1_1 15 // bfp_processor_threads.sc.h:95 Loop 1.1.1
+#define SCHED_BFPP_UNIT_LoadInputs_L1 2 // bfp_processor_threads.sc.h:32 Loop 1
+#define SCHED_BFPP_UNIT_LoadInputs_L1_1 3 // bfp_processor_threads.sc.h:37 Loop 1.1
 #define SCHED_BFPP_UNIT_LoadInputs_L1_1_1 1 // bfp_processor_threads.sc.h:44 Loop 1.1.1
 #define SCHED_BFPP_UNIT_LoadInputs_L1_1_2 1 // bfp_processor_threads.sc.h:55 Loop 1.1.2
+#define SCHED_BFPP_UNIT_LoadWeights_L1 2 // bfp_processor_threads.sc.h:11 Loop 1
 #define SCHED_BFPP_UNIT_LoadWeights_loop_A 2 // bfp_processor_functions.sc.h:199 loop_A
 #define SCHED_BFPP_UNIT_LoadWeights_loop_B 8 // bfp_processor_functions.sc.h:228 loop_B
 #define SCHED_BFPP_UNIT_LoadWeights_loop_C 16 // bfp_processor_functions.sc.h:296 loop_C
@@ -39,9 +44,13 @@
 #define SCHED_BFP_Acc_Load_Unit_L1_1 1 // acc_load_unit.sc.h:175 Loop 1.1
 #define SCHED_BFP_Acc_Scheduler_L1 7 // acc_scheduler.sc.h:46 Loop 1
 #define SCHED_BFP_Acc_Store_Unit_L1 1 // acc_store_unit.sc.h:13 Loop 1
+#define SCHED_BFP_Acc_WeightLoader_A_L1 2 // acc_load_unit.sc.h:70 Loop 1
 #define SCHED_BFP_Acc_WeightLoader_A_L1_1 1 // acc_load_unit.sc.h:72 Loop 1.1
+#define SCHED_BFP_Acc_WeightLoader_B_L1 2 // acc_load_unit.sc.h:90 Loop 1
 #define SCHED_BFP_Acc_WeightLoader_B_L1_1 1 // acc_load_unit.sc.h:92 Loop 1.1
+#define SCHED_BFP_Acc_WeightLoader_C_L1 2 // acc_load_unit.sc.h:110 Loop 1
 #define SCHED_BFP_Acc_WeightLoader_C_L1_1 1 // acc_load_unit.sc.h:112 Loop 1.1
+#define SCHED_BFP_Acc_WeightLoader_D_L1 2 // acc_load_unit.sc.h:130 Loop 1
 #define SCHED_BFP_Acc_WeightLoader_D_L1_1 1 // acc_load_unit.sc.h:132 Loop 1.1
 #define SCHED_BFP_Acc_Weight_Transfer_A_L1 1 // acc_load_unit.sc.h:9 Loop 1
 #define SCHED_BFP_Acc_Weight_Transfer_B_L1 1 // acc_load_unit.sc.h:24 Loop 1

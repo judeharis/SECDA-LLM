@@ -1,5 +1,21 @@
 # bfpp_acc/v3 — changes
 
+## 2026-09-29 — sched-sync --outer --variable max
+
+**Why.** SECDA-LLM TODO 3.6: the first sync modelled only loops with a fixed
+per-iteration figure. SECDA-Core `ad29364` makes the outer and variable cases
+safe: the variable range applies to leaf loops only, and pipelined children's
+fill/drain is charged to the parent.
+
+| Where | Change |
+|---|---|
+| `accelerator/*.sc.h`, `acc_schedule.{h,json}` | `SECDA_SCHED_ARGS="--outer --variable max"`, converged on pass 2: 9 more constants, e.g. `SCHED_BFPP_UNIT_Compute_L1_1` 29 (per row of the flattened `m`/`k` pipeline, II 16, latency 44) |
+
+**Verified.** Simulation: the gate suite differs from its previous baseline only
+in the cycle counters (re-baselined). The board comparison barely moves: for
+`llama-cli -n 4`, `HWC_X1_Compute` board/sim is 1.310 (was 1.313). The rest is
+about 30 cycles per output that the HLS schedule doesn't show (TODO 3.7).
+
 ## 2026-09-28 — simulated timing synced to HLS; monitor targets; fpga_compute_cycles
 
 **Why.** SECDA-Core's `sched-sync` refused this design (a false error, fixed in
