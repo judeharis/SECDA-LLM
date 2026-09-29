@@ -137,11 +137,10 @@ The actionable follow-ups are in [TODO.md](TODO.md).
   `gen-vscode` still call Bazel.
   `hw-gen`, the HLS/HLX builds, `sched-sync`, `load` and `run-on-board --bin`
   all work for this repo (TODO section 3).
-- **Simulated timing is now synced to HLS** (TODO 3.1). Simulated compute is 16x
-  what it was: HLS takes 15 cycles per `vec_dot`, where simulation used 1. Before
-  that, the board's run of the section 3 changes has to be re-done (TODO 3.5,
-  `kriaB_L` went down). Weight transfer is 10x slower on the board than in
-  simulation (388 vs 38 µs for the MUL_MAT tests), which is not explained yet.
+- **Simulated timing is synced to HLS** (TODO 3.1, 3.5). HLS takes 15 cycles per
+  `vec_dot`, where simulation used 1. For `llama-cli -n 4`, the board's compute
+  counter is 1.31x simulation's, down from 21x before the sync; weight transfer
+  is 1.47x. The loops the sync couldn't model account for the rest (TODO 3.6).
 - **Monitors 4-11 aren't busy counters.** `Weight_Transfer_A-D` never leave
   their busy state after the first weight; `WeightLoader_A-D` never report one.
   Left as they are: fixing them needs a bitstream rebuild (TODO 3.2).

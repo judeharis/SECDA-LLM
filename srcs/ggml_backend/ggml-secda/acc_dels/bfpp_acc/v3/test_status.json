@@ -105,6 +105,15 @@
         "commit": "b75bd93",
         "source": "manual",
         "notes": "sched-sync applied (19 DWAIT sites, acc_schedule.h; converged on pass 2, SECDA-Core 48da6eb), monitor targets 5-7=1 and 12=2, fpga_compute_cycles from HWC_X1_Compute; committed alongside this record. Gate suite vs its previous baseline: only fpga_compute_cycles / fpga_weight_transfer_cycles differ (16 of 68 checks); pass counts, perplexity, text and warnings identical; re-baselined. test-backend-ops MUL_MAT 51/51."
+      },
+      {
+        "level": "verified_accurate",
+        "outcome": "pass",
+        "target": "KRIA",
+        "date": "2026-09-29",
+        "commit": "a310f5d",
+        "source": "manual",
+        "notes": "kriaB_L after a reboot (test_0928g, checksummed; bitstream unchanged). driver and driver_batches: MUL_MAT 51/51 and 55/55; secda-llama-cli text (flash attention auto and -fa off) equal to the board CPU's -fa off text; no warnings, no u-dma-buf left. llama-cli -n 4 counters, board vs synced sim: HWC_X1_Compute 80,342,232 vs 61,212,672 (1.31; 21x before sched-sync), Load_Unit 5.35M vs 3.63M (1.47); fpga_compute_cycles 401,711 us = 98% of the wall-clock fpga_compute 409,749 us. The first attempt (2026-09-28) hit cma_alloc failures and the board went down; not counted."
       }
     ]
   }

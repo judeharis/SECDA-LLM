@@ -143,15 +143,28 @@ These bugs were kept for parity during the migration (minimal-fork spec §6, ris
         --deploy <bins>:bins --env LD_LIBRARY_PATH=bins --check "grep -q '51/51
         tests passed'" -- test -b SECDA -o MUL_MAT` passed, reset the board to
         `CPU_1_0`, and left no u-dma-buf.
-- [ ] **3.5 Board re-check of the section 3 driver changes** (new monitor
-      targets, `fpga_compute_cycles` from `HWC_X1_Compute`). The 2026-09-28 run on
-      `kriaB_L` failed intermittently with `cma_alloc: alloc failed`, then the
-      board stopped responding.
-      - Re-run `test_0928g/run_g.sh` for all four variants after a reboot.
-      - Also compare the board's `HWC_X1_Compute` for `llama-cli -n 4 "what is my
-        name?"` with simulation's 61.2M cycles (`/tmp/prof2_*`).
-      - **Open question:** weight transfer took 38 µs in simulation but 388 µs on
-        the board for the 51 MUL_MAT tests (`fpga_weight_transfer_cycles`).
+- [x] **3.5 Board check of section 3.** Done 2026-09-29 on `kriaB_L`, after a
+      reboot. The first attempt, on 2026-09-28, hit `cma_alloc: alloc failed`
+      and the board went down.
+      - **Checks:** all four variants pass test-backend-ops (51/51, 55/55,
+        SOFT_MAX 212/212). llama-cli text with flash attention auto and `-fa off`
+        equals the board CPU's `-fa off` text. No warnings, no u-dma-buf left.
+      - **Counters** for `llama-cli -n 4 "what is my name?"`, board vs synced
+        simulation:
+        - `HWC_X1_Compute` 80.3M vs 61.2M, board/sim **1.31** (before the sync,
+          simulation had 3.8M: 21x low);
+        - Load_Unit 5.35M vs 3.63M, 1.47;
+        - the free-running counters about 1.41.
+      - **`fpga_compute_cycles` is right on hardware:** 401,711 µs, 98% of the
+        board's wall-clock compute wait (409,749 µs).
+- [ ] **3.6 (optional) Close the remaining 1.3-1.5x.** The sync modelled only the
+      loops with a fixed per-iteration figure. The `--outer` loops (e.g.
+      Load_Unit L1 12 cycles vs 4, Compute L1 4 vs 2) and the variable
+      Control_Unit loop (8~17 cycles) are still unmodelled. Try
+      `SECDA_SCHED_ARGS="--outer --variable max"` and re-compare with the board.
+      Separately, test-backend-ops' 51 MUL_MAT tests showed 38 µs of weight
+      transfer in simulation vs 388 µs on the board, where the model run's ratio
+      is 1.47.
 
 ## 4. Benchmark suite (can't run the new builds today)
 

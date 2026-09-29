@@ -20,8 +20,10 @@ state 31, a one-cycle handshake, and monitors 5-7 and 12 had no target state.
 
 **Verified.** Simulation: the gate suite differs from its previous baseline only
 in `fpga_compute_cycles`/`fpga_weight_transfer_cycles` (pass counts, perplexity,
-generated text and warnings identical), and was re-baselined. KV260: pending
-(SECDA-LLM TODO 3.5).
+generated text and warnings identical), and was re-baselined. KV260 (`kriaB_L`, 2026-09-29): test-backend-ops and llama-cli
+unchanged. For `llama-cli -n 4`, `HWC_X1_Compute` is 80.3M cycles, 1.31x the
+synced simulation's 61.2M (it was 21x before the sync), and `fpga_compute_cycles`
+is 98% of the wall-clock compute wait.
 
 ## 2026-09-28 — explicit MUL_MAT layers (driver hygiene)
 
