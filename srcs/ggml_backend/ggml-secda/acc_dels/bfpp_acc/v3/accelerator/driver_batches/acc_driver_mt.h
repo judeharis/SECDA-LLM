@@ -108,14 +108,18 @@ void LoadWeights_Inference(acc_container *drv, int m, int mstep, int nstep,
 
   TOG2("Weight Send Start\n");
   prf_start(1);
-  drv->mdma->dmas[0].dma_change_start(0);
-  drv->mdma->dmas[0].dma_start_send(ld1);
+  // DMA 0 carries the opcode, and the Load_Unit counts from the moment it
+  // reads it. DMAs 1-3 carry only weights, which WeightLoader_B-D read once
+  // the opcode has started them, so start those first: their words wait in
+  // the streams instead of the Load_Unit waiting for the ARM (TODO 3.8).
   drv->mdma->dmas[1].dma_change_start(0);
   drv->mdma->dmas[1].dma_start_send(ld2);
   drv->mdma->dmas[2].dma_change_start(0);
   drv->mdma->dmas[2].dma_start_send(ld3);
   drv->mdma->dmas[3].dma_change_start(0);
   drv->mdma->dmas[3].dma_start_send(ld4);
+  drv->mdma->dmas[0].dma_change_start(0);
+  drv->mdma->dmas[0].dma_start_send(ld1);
   drv->mdma->multi_dma_wait_send();
   prf_end(1, drv->a_t->fpga_wgt_send);
   TOG2("Weight Send End\n");
@@ -162,6 +166,23 @@ void LoadWeights_Preloaded(acc_container *drv, int m, int mstep, int nstep,
   DMA_I[ld++] = packets_per_tile_D;
 
   TOG2(cout << "Weight OPCODE Prepared" << endl);
+  // The Load_Unit counts from the moment it reads the opcode. DMAs 1-3 carry
+  // only weights, which WeightLoader_B-D read once the opcode has started
+  // them, so start those before the opcode: their words wait in the streams
+  // instead of the Load_Unit waiting for the ARM to program them (TODO 3.8).
+  prf_start(7);
+  drv->mdma->dmas[1].dma_change_start(tile_offset_B);
+  drv->mdma->dmas[2].dma_change_start(tile_offset_C);
+  drv->mdma->dmas[3].dma_change_start(tile_offset_D);
+  prf_end(7, drv->a_t->fpga_wgt_pack_opt);
+
+  prf_start(8);
+  TOG2(cout << "Weight Send Start (B-D)" << endl);
+  drv->mdma->dmas[1].dma_start_send(packets_per_tile_B);
+  drv->mdma->dmas[2].dma_start_send(packets_per_tile_C);
+  drv->mdma->dmas[3].dma_start_send(packets_per_tile_D);
+  prf_end(8, drv->a_t->fpga_wgt_send);
+
   drv->mdma->dmas[0].dma_change_start(0);
   drv->mdma->dmas[0].dma_start_send(ld);
   drv->mdma->dmas[0].dma_wait_send();
@@ -173,21 +194,12 @@ void LoadWeights_Preloaded(acc_container *drv, int m, int mstep, int nstep,
 
   // Send Weight Data
   prf_start(6);
-
   drv->mdma->dmas[0].dma_change_start(tile_offset_A);
-  drv->mdma->dmas[1].dma_change_start(tile_offset_B);
-  drv->mdma->dmas[2].dma_change_start(tile_offset_C);
-  drv->mdma->dmas[3].dma_change_start(tile_offset_D);
-
   prf_end(6, drv->a_t->fpga_wgt_pack_opt);
 
   prf_start(1);
-  // drv->mdma->dmas[0].dma_start_send(wgt_blck * kb * mstep);
-  TOG2(cout << "Weight Send Start" << endl);
+  TOG2(cout << "Weight Send Start (A)" << endl);
   drv->mdma->dmas[0].dma_start_send(packets_per_tile_A);
-  drv->mdma->dmas[1].dma_start_send(packets_per_tile_B);
-  drv->mdma->dmas[2].dma_start_send(packets_per_tile_C);
-  drv->mdma->dmas[3].dma_start_send(packets_per_tile_D);
   TOG2(cout << "Weight Send Wait" << endl);
 
   drv->mdma->multi_dma_wait_send();
