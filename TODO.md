@@ -315,10 +315,19 @@ These bugs were kept for parity during the migration (minimal-fork spec §6, ris
       `secda-test-backend-ops`, `secda-llama-bench` and `llama-perplexity` build
       as 32-bit ARM against `secda_corev6`. Not run: there is no Z1 bfpp_acc
       bitstream.
-- [ ] **5.5 Phase 7, SECDA-Core CMake tooling (optional, in SECDA-Core).** Add a
-      `build_system: "cmake"` config key, so that `./secda build` runs
-      `cmake --build --preset` and `./secda list` reads `hw_params.json` without
-      Bazel; `revamp_scan.py` should skip `.bazelrc` for CMake repos.
+- [x] **5.5 Phase 7, SECDA-Core CMake tooling.** Done 2026-09-30.
+      - SECDA-Core `490abce`: config.json `"build_system": "cmake"` (default
+        `"bazel"`). `./secda list` shows the `CMakePresets.json` build presets and
+        both hw configs; `./secda build <preset>` runs the configure preset first
+        when its build tree has no cache, then `cmake --build --preset`
+        (`SECDA-sim-x64` built; `--man build x64-linux-gcc-release` plans both
+        steps); `gen-vscode` defers to CMake Tools. Bazel repos are unchanged.
+      - This repo's `config.json` and `config.example.json` set it.
+      - `revamp_scan.py` (secda-revamp skill) skips the `.bazelrc` check for a
+        CMake repo and looks for `.bazelrc` in `bazel_workspace`. Its only
+        SECDA-LLM finding is now `cma-api`. For SECDA-TFLite it now reports a real
+        gap in place of the false one: `tensorflow/.bazelrc` has no
+        `fpga_arm32`/`fpga_arm64` presets.
 
 ## 6. Owner decisions
 

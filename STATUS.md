@@ -133,9 +133,10 @@ The actionable follow-ups are in [TODO.md](TODO.md).
   is a different case. Its greedy text diverges from both the accelerator and x86
   at the first generated token. That is presumably the same ARM vs x86 CPU rounding
   seen in perplexity. So on the board, tokens are checked against simulation.
-- **SECDA-Core tooling for CMake (optional).** `./secda build`, `list` and
-  `gen-vscode` still call Bazel.
-  `hw-gen`, the HLS/HLX builds, `sched-sync`, `load` and `run-on-board --bin`
+- **SECDA-Core tooling for CMake.** With `"build_system": "cmake"` in
+  `config.json`, `./secda list` shows the CMake build presets and hw configs and
+  `./secda build <preset>` configures if needed and builds (SECDA-Core `490abce`,
+  TODO 5.5); `gen-vscode` defers to CMake Tools. `hw-gen`, the HLS/HLX builds, `sched-sync`, `load` and `run-on-board --bin`
   all work for this repo (TODO section 3).
 - **Simulated timing is synced to HLS** (TODO 3.1, 3.5). HLS takes 15 cycles per
   `vec_dot`, where simulation used 1. For `llama-cli -n 4`, the board's compute

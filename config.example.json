@@ -1,4 +1,5 @@
 {
+  "build_system": "cmake",
   "secda_init_path": "CHANGE_ME_project_root_path",
   "bitstream_dir": "CHANGE_ME_project_root_path/hardware_automation/bitstreams",
   "path_to_solutions": "srcs/ggml_backend/ggml-secda/acc_dels",
