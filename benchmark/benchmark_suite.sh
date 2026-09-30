@@ -19,8 +19,6 @@ board_addr="${board_user}@${board_hostname}"
 port="$(cfg board_port)"
 board_dir="$(cfg board_dir)"
 board_sub="benchmark"
-# Optional: no token, no notification. $PUSHBULLET_TOKEN overrides config.json.
-pb_token="${PUSHBULLET_TOKEN:-$(jq -r '.push_bullet_token // empty' "${repo_root}/config.json")}"
 # The run scripts load bitstreams, write /dev/u-dma-buf-mgr and drop caches,
 # so they need root: a non-root board user must have passwordless sudo.
 board_shell="bash -lc"
@@ -52,17 +50,6 @@ declare -A stage_status
 # ============================================================================
 # UTILITIES
 # ============================================================================
-
-send_pushbullet_notification() {
-  local message="$*"
-  [[ -n "${pb_token}" ]] || return 0
-  curl -s -o /dev/null --header "Access-Token: ${pb_token}" \
-    --header 'Content-Type: application/json' \
-    --data-binary "{\"body\":\"${message}\",\"title\":\"Jude Home (Ubuntu)\",\"type\":\"note\"}" \
-    --request POST \
-    https://api.pushbullet.com/v2/pushes
-  echo "Pushbullet response: $?"
-}
 
 log_stage() {
   echo "[SECDA-LLM] $*"
@@ -218,7 +205,6 @@ EOF
     rm -rf "$clone_path"
     cp -a "$results_dir/." "$clone_path/"
     log_stage "Results cloned to $clone_path"
-    send_pushbullet_notification "$result_name ran in $1s"
   fi
 }
 

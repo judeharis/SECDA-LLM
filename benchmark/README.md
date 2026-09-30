@@ -34,9 +34,6 @@ CMA, which can fail once the board's CMA has fragmented. Set
 board runs (MobileLLM-125M preloads all its layers with 16). Layers that don't
 fit are sent per call instead of preloaded.
 
-**Notifications.** A Pushbullet note is sent when a named run finishes, only if
-`config.json` has `push_bullet_token` (or `$PUSHBULLET_TOKEN` is set).
-
 It combines those values into the remote target and then runs up to three stages:
 
 - `-b`: build and send binaries to the board
