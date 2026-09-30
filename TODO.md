@@ -318,7 +318,8 @@ These bugs were kept for parity during the migration (minimal-fork spec §6, ris
 
 - [ ] **6.1 Rotate the Pushbullet tokens:** the one in `benchmark_suite.sh`'s history
       and the one in the local `config.json`.
-- [ ] **6.2 Branch.** SECDA-DS's `CLAUDE.md` names `v3_core_upgrade`, but the work is
-      on `v3_core_upgrade_wip`. Fast-forward `v3_core_upgrade`, or update the docs.
+- [x] **6.2 Branch.** Done 2026-09-30: `v3_core_upgrade_wip` fast-forwarded into
+      `v3_core_upgrade` (36 commits), where the work continues, as SECDA-DS's
+      `CLAUDE.md` says. `_wip` is left in place; nothing pushed.
 - [x] **6.3 NaN semantics** (1.3): confirmed 2026-09-30, a NaN output fails the case
       by default (upstream's behaviour); `SECDA_TBO_NAN_PASS=1` is the opt-out.
