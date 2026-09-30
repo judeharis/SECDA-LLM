@@ -1,5 +1,26 @@
 # bfpp_acc/v4 — changes
 
+## 2026-09-30 — weight DMAs 1-3 started before the opcode DMA
+
+**Why.** SECDA-LLM TODO 3.8: `fpga_weight_transfer_cycles` (the Load_Unit in
+state 4) starts when the weight opcode arrives on DMA 0. Both weight paths
+started DMA 0 first, so on the board the counter also ran while the ARM
+programmed DMAs 1-3. The RTL replay showed the design itself matches
+simulation.
+
+| Where | Change |
+|---|---|
+| `driver*/acc_driver_mt.h` `LoadWeights_Inference` | DMAs 1-3 started before DMA 0 (opcode + A weights + compute opcode) |
+| `driver*/acc_driver_mt.h` `LoadWeights_Preloaded` | DMAs 1-3 programmed and started before the opcode send; profiler slots 7/8 for that segment |
+
+**Verified.** Simulation: the gate suite matches the baseline (SystemC charges
+no time to the driver). kria2, old vs new driver in one session: every check
+passes, `llama-cli` text is identical, and the Load_Unit counter falls by about
+half for test-backend-ops and 8% for `llama-cli -n 4` (board/sim 1.50 to 1.38).
+Wall-clock time doesn't change beyond run-to-run noise: the CPU does the same
+work, only in a different order. The rest of the preloaded gap is DMA 0 itself,
+which has to finish the opcode before the ARM can program tile A.
+
 ## 2026-09-30 — flattened Compute loop charged per output
 
 **Why.** SECDA-LLM TODO 3.7: the RTL replay showed outputs 46 cycles apart, as on

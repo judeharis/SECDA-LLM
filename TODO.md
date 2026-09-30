@@ -196,8 +196,9 @@ These bugs were kept for parity during the migration (minimal-fork spec §6, ris
       - **Gate suite:** only the cycle counters differ (16 of 65 checks);
         re-baselined, previous kept as `step0_pre_flatten`. Since the sync, the
         `-b 16` perplexity runs on `SECDA-sim-x64` only (`out/baseline_mf`, local).
-- [ ] **3.8 Weight-transfer ratios: diagnosed 2026-09-30; the design is exact,
-      the gap is driver time inside the counter.**
+- [x] **3.8 Weight-transfer ratios.** Done 2026-09-30: the design is exact, the
+      gap was driver time inside the counter, and the driver now keeps most of
+      it out.
       - **What the counter measures.** `fpga_weight_transfer_cycles` is
         `Load_Unit` (monitor 1) in state 4: from reading the weight opcode until
         all four WeightLoaders finish.
@@ -223,15 +224,29 @@ These bugs were kept for parity during the migration (minimal-fork spec §6, ris
         (`hardware_automation/results/bfpp_acc_v3/20260928T212011Z`, TODO 3.5);
         the single-tile board value is only kept as a ratio. The call count is
         from a traced sim run (600 sends on DMA 1).
-      - **Options (owner's call):**
-        - *Accept it:* the counter includes driver DMA-issue time by design;
-          compare simulation with the board as sim + ~7 us (Inference) or
-          ~14 us (Preloaded) per `LoadWeights` call.
-        - *Driver fix:* start DMAs 1-3 before the DMA carrying the opcode (the
-          WeightLoaders only read once the Load_Unit raises their flags, so
-          the words wait in the stream). That removes the window from the
-          counter and from the board's wall-clock, ~8.6 ms of `llama-cli -n 4`.
-          Needs a board run on `kriaB_L` to confirm.
+      - **Driver fix (`5695980`):** DMAs 1-3 are started before the opcode DMA,
+        on both weight paths, in all four drivers. kria2, old vs new driver in
+        one session: every check passes (MUL_MAT 51/51 and 55/55, SOFT_MAX
+        212/212 on v4) and `llama-cli` text is identical. Load_Unit cycles:
+
+        | Run | Old | New | Sim |
+        |---|---|---|---|
+        | MUL_MAT, v3 driver | 87,355 | 38,181 | ~7,400 (estimate) |
+        | MUL_MAT, v3 batches | 98,505 | 43,398 | |
+        | `llama-cli -n 4`, v3 driver | 5,451,961 | 5,029,119 | 3,632,400 |
+        | `llama-cli -n 4`, v4 batches | 5,392,652 | 5,027,229 | 3,632,400 |
+
+        Wall-clock time is unchanged beyond run-to-run noise: the ARM does the
+        same work in a different order, so the ~8.6 ms saving predicted above
+        didn't materialise. `HWC_X1_Compute` is 80,342,232 in every run.
+- [ ] **3.9 The rest of the preloaded weight gap (optional).** `llama-cli`
+      board/sim is still 1.38 (~9.3 us per load). DMA 0 carries the opcode and
+      then tile A as two transfers, and a simple-mode AXI DMA takes no second
+      transfer until the first completes, so the ARM waits for the opcode and
+      programs A while the Load_Unit counts. Closing it needs the opcode and
+      tile A in one transfer (a header slot before each preloaded tile A in the
+      preload layout), or the opcode on its own stream (a hardware change).
+      Affects only the counter, not the output.
 
 ## 4. Benchmark suite (can't run the new builds today)
 

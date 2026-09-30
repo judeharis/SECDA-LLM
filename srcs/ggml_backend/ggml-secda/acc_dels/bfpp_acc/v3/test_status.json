@@ -132,6 +132,15 @@
         "commit": "e044f7d",
         "source": "manual",
         "notes": "sched-sync DWAIT placement for flattened loops (SECDA-Core facb566): SCHED_BFPP_UNIT_Compute_L1_1 (29) moved from the n body to the m body, i.e. charged per output, not per row; committed alongside this record. Gate suite vs its previous baseline (kept as step0_pre_flatten): only the cycle counters differ (16 of 65 checks); text, pass counts and perplexity identical; re-baselined. llama-cli -n 4 HWC_X1_Compute: sim 79,703,676 vs board 80,342,232 (1.008; was 1.310). Single-tile Q2_K perf compute per run: sim 115.29 us vs board 117.77 us (was 41.55 us)."
+      },
+      {
+        "level": "verified_accurate",
+        "outcome": "pass",
+        "target": "KRIA",
+        "date": "2026-09-30",
+        "commit": "5695980",
+        "source": "manual",
+        "notes": "kria2 (freshly booted; bitstream checksummed on the board, addresses checked against the .hwh). Driver change 5695980 (weight DMAs 1-3 started before the opcode DMA) against the previous driver (3ba7456), same board and session. driver and driver_batches: MUL_MAT 51/51 and 55/55; llama-cli -n 4 text identical old vs new; no warnings, no u-dma-buf left. Load_Unit (fpga_weight_transfer) cycles, old -> new: MUL_MAT 87,355 -> 38,181 (driver), 98,505 -> 43,398 (batches); llama-cli 5,451,961 -> 5,029,119 and 5,395,993 -> 5,062,245 (sim 3,632,400: board/sim 1.50 -> 1.38). HWC_X1_Compute 80,342,232 in every run. Wall-clock layer_total within run-to-run noise (v3 495.8 -> 489.2 ms, batches 488.4 -> 498.2 ms). Remaining preloaded gap: DMA 0 carries the opcode and then tile A, so the ARM still waits for the opcode and programs A while the Load_Unit counts (TODO 3.8)."
       }
     ]
   }
