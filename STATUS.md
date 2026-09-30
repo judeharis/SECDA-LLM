@@ -116,10 +116,6 @@ verification detail is in SECDA-DS `docs/secda-llm-migration-plan.md` and
 
 The actionable follow-ups are in [TODO.md](TODO.md).
 
-- **Pushbullet tokens.** `benchmark/benchmark_suite.sh` hard-codes a token. It has
-  been in history since `4769480` (2026-06-03) and is already on `origin/main`. A
-  different token was in the local `config.json`. Rotate both, then take the token
-  out of the script.
 - **KV260 CMA fragments after long uptime.**
   - The KV260 build takes 4 x (192 MB + 16 MB) = 832 MB of the board's ~1 GB CMA.
   - After `kriaB_L` had been up 38 h, the u-dma-bufs failed to allocate, even for
@@ -185,19 +181,10 @@ The actionable follow-ups are in [TODO.md](TODO.md).
 
 ## Next session
 
-1. Work through [TODO.md](TODO.md): section 3 (hardware flow) or 4 (benchmark
-   suite).
-2. Rotate the Pushbullet tokens.
-3. Decide which branch carries the work. SECDA-DS's `CLAUDE.md` names
-   `v3_core_upgrade`, but the work is on `v3_core_upgrade_wip`.
-   `v3_core_upgrade` can fast-forward to it.
-4. Fix the benchmark suite (see Open items), then run it on the KV260:
-   - add runtime entries for `BFPP_ACC_KRIA_{3,4}_0`;
-   - make `benchmark_suite.sh` read `.boards.KRIA.*` from `config.json`;
-   - run the board-side scripts as root.
-5. Consider smaller per-DMA buffers for the KV260.
-
----
+1. Push, SECDA-Core first (SECDA-LLM's `third_party/secda_core` pin points at an
+   unpushed SECDA-Core commit), then this repo's `v3_core_upgrade`.
+2. Optional: TODO 3.9 (the rest of the preloaded weight gap), a Z1 bfpp_acc design
+   (post-migration).
 
 ## Key files
 

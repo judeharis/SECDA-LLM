@@ -331,8 +331,10 @@ These bugs were kept for parity during the migration (minimal-fork spec §6, ris
 
 ## 6. Owner decisions
 
-- [ ] **6.1 Rotate the Pushbullet tokens:** the one in `benchmark_suite.sh`'s history
-      and the one in the local `config.json`.
+- [x] **6.1 Rotate the Pushbullet tokens.** Done 2026-09-30: the owner reset the
+      Pushbullet access token, which invalidates both (the one in
+      `benchmark_suite.sh`'s history and the local `config.json`'s). Pushbullet is
+      gone from the tools, and the key from the local configs.
 - [x] **6.2 Branch.** Done 2026-09-30: `v3_core_upgrade_wip` fast-forwarded into
       `v3_core_upgrade` (36 commits), where the work continues, as SECDA-DS's
       `CLAUDE.md` says. `_wip` is left in place; nothing pushed.
