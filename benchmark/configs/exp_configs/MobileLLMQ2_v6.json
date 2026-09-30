@@ -1,0 +1,12 @@
+{
+  "models": [
+    "MobileLLMQ2"
+  ],
+  "runtimes": [
+    "bfpp.v3",
+    "bfpp.v3b",
+    "bfpp.v4",
+    "bfpp.v4b",
+    "cpu.v6"
+  ]
+}

@@ -20,5 +20,7 @@ bazel-*
 llama_perf.csv
 tbo.csv
 prf.csv
+secda_profile.json
+dma*.csv
 _gstats/
 _plans/

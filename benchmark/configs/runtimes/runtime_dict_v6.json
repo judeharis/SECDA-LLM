@@ -1,0 +1,42 @@
+{
+    "bfpp.v3": {
+        "bitstreams": "BFPP_ACC_KRIA_3_0",
+        "binaries": "llama_cli_bfpp_v3",
+        "acc_tag": "BFPP_KRIA_v3.0_driver",
+        "bins": "bin_bfpp_v3",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK2=ON -DSECDA_QK3=ON -DSECDA_QK4=ON -DSECDA_QK5=ON -DSECDA_QK6=ON -DSECDA_BFPP_ACC_V3=ON"
+    },
+    "bfpp.v3b": {
+        "bitstreams": "BFPP_ACC_KRIA_3_0",
+        "binaries": "llama_cli_bfpp_v3b",
+        "acc_tag": "BFPP_KRIA_v3.0_batches",
+        "bins": "bin_bfpp_v3b",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK2=ON -DSECDA_QK3=ON -DSECDA_QK4=ON -DSECDA_QK5=ON -DSECDA_QK6=ON -DSECDA_BFPP_ACC_V3=ON -DSECDA_BFPP_ACC_V3_DRIVER_BATCHES=ON"
+    },
+    "bfpp.v4": {
+        "bitstreams": "BFPP_ACC_KRIA_4_0",
+        "binaries": "llama_cli_bfpp_v4",
+        "acc_tag": "BFPP_KRIA_v4.0_driver",
+        "bins": "bin_bfpp_v4",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK2=ON -DSECDA_QK3=ON -DSECDA_QK4=ON -DSECDA_QK5=ON -DSECDA_QK6=ON -DSECDA_BFPP_ACC_V4=ON"
+    },
+    "bfpp.v4b": {
+        "bitstreams": "BFPP_ACC_KRIA_4_0",
+        "binaries": "llama_cli_bfpp_v4b",
+        "acc_tag": "BFPP_KRIA_v4.0_batches",
+        "bins": "bin_bfpp_v4b",
+        "accelerated": "true",
+        "bin_flags": "-DSECDA_QK2=ON -DSECDA_QK3=ON -DSECDA_QK4=ON -DSECDA_QK5=ON -DSECDA_QK6=ON -DSECDA_BFPP_ACC_V4=ON -DSECDA_BFPP_ACC_V4_DRIVER_BATCHES=ON"
+    },
+    "cpu.v6": {
+        "bitstreams": "CPU_1_0",
+        "binaries": "llama_cli_cpu",
+        "acc_tag": "CPU_KRIA_v1.0_cpu",
+        "bins": "bin_cpu",
+        "accelerated": "false",
+        "bin_flags": "-DNOPERF=ON -DGGML_SECDA=OFF"
+    }
+}

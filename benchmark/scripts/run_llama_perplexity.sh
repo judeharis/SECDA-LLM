@@ -3,7 +3,8 @@ set -eo pipefail
 
 threads=(1)
 
-BOARD_PATH="/home/ubuntu/Workspace/secda_llm"
+# The suite rsyncs this script into the board_dir it runs from.
+BOARD_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BOARD_SUB="benchmark"
 BENCHMARK_ROOT="${BOARD_PATH}/${BOARD_SUB}"
 RESULTS_DIR_REL="../results"
@@ -14,8 +15,8 @@ COMMANDS_FILE="${BENCHMARK_ROOT}/commands_perplexity.txt"
 
 LOAD_BITSTREAM_PY="${HOME}/load_bitstream.py"
 BOARD_BITSTREAMS_DIR="${BOARD_PATH}/bitstreams"
-HOST_BITSTREAMS_DIR="/home/ubuntu/bitstreams"
-CLEAR_BITSTREAM_FILE="CPU_KRIA_1_0.bit"
+HOST_BITSTREAMS_DIR="${BOARD_PATH}/bitstreams"
+CLEAR_BITSTREAM_FILE="CPU_1_0.bit"
 DEFAULT_BITSTREAM_FILE="CPU_1_0.bit"
 
 UDMABUF_GLOB="/dev/udmabuf*"
@@ -169,10 +170,10 @@ run_single_binary() {
     exit 1
   fi
 
-  echo "sudo env LD_LIBRARY_PATH=\${PWD}/bin:\${LD_LIBRARY_PATH:-} ./${ppl_binary} -m ${MODEL_DIR}/${model} -f ${dataset_path} -t ${thread} --ctx-size ${PPL_CTX_SIZE} -b ${PPL_BATCH} -ub ${PPL_UBATCH} --chunks ${PPL_CHUNKS} ${FLAGS}" >>"${COMMANDS_FILE}"
+  echo "sudo env LD_LIBRARY_PATH=\${PWD}:\${PWD}/bin:\${LD_LIBRARY_PATH:-} ./${ppl_binary} -m ${MODEL_DIR}/${model} -f ${dataset_path} -t ${thread} --ctx-size ${PPL_CTX_SIZE} -b ${PPL_BATCH} -ub ${PPL_UBATCH} --chunks ${PPL_CHUNKS} ${FLAGS}" >>"${COMMANDS_FILE}"
 
   local cmd_status=0
-  LD_LIBRARY_PATH="${PWD}/bin:${LD_LIBRARY_PATH:-}" "./${ppl_binary}" -m "${MODEL_DIR}/${model}" -f "${dataset_path}" -t "${thread}" --ctx-size "${PPL_CTX_SIZE}" -b "${PPL_BATCH}" -ub "${PPL_UBATCH}" --chunks "${PPL_CHUNKS}" ${FLAGS} \
+  LD_LIBRARY_PATH="${PWD}:${PWD}/bin:${LD_LIBRARY_PATH:-}" "./${ppl_binary}" -m "${MODEL_DIR}/${model}" -f "${dataset_path}" -t "${thread}" --ctx-size "${PPL_CTX_SIZE}" -b "${PPL_BATCH}" -ub "${PPL_UBATCH}" --chunks "${PPL_CHUNKS}" ${FLAGS} \
     2>&1 | tee "${result_txt}" || cmd_status=$?
 
   check_cmd_status "${cmd_status}"

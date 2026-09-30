@@ -61,7 +61,8 @@ def generate_exp_config(exp_config_name, synth_config_name="synth_params"):
     with open(CONFIGS_DIR / "runtimes" / "runtime_dict_og.json", "r") as jf:
         runtime_dict = json.load(jf)
 
-    for suffix in ("1", "2", "3"):
+    # v6: the runtimes for the SECDA-Core migration (BFPP_ACC_KRIA_{3,4}_0).
+    for suffix in ("1", "2", "3", "v6"):
         with open(CONFIGS_DIR / "runtimes" / f"runtime_dict_{suffix}.json", "r") as jf:
             runtime_dict.update(json.load(jf))
 

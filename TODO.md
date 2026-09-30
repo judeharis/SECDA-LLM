@@ -248,37 +248,56 @@ These bugs were kept for parity during the migration (minimal-fork spec §6, ris
       preload layout), or the opcode on its own stream (a hardware change).
       Affects only the counter, not the output.
 
-## 4. Benchmark suite (can't run the new builds today)
+## 4. Benchmark suite — done 2026-09-30
 
-- [ ] **4.1 Config shape.** `benchmark/benchmark_suite.sh` reads `board_user`,
-      `board_hostname`, `board_port` and `board_dir` from the top level of
-      `config.json`, but those keys now live under `boards.KRIA`. Read
-      `.boards.KRIA.*` and update `benchmark/README.md`.
-- [ ] **4.2 Root on the board.** The suite starts the run scripts over ssh as
-      `board_user` without sudo. The scripts load bitstreams, write
-      `/dev/u-dma-buf-mgr` and run the binaries, all without sudo. Start them with sudo
-      from the suite, or document that the board user must be root.
-- [ ] **4.3 Runtime entries.** `benchmark/configs/exp_configs.sh` and
-      `configs/runtimes/*.json` name pre-migration bitstreams (e.g. `BFPB_Q3_v1`). Add
-      runtimes for `BFPP_ACC_KRIA_3_0` and `BFPP_ACC_KRIA_4_0`, both drivers each.
-- [ ] **4.4 Remove the hard-coded Pushbullet token** from `benchmark_suite.sh`. Read
-      it from `config.json` or the environment. This only stops new copies; it is
-      already in public history.
-- [ ] **4.5 One full suite run** on `kriaB_L` with the new runtimes. *Done when:*
-      `llama_perf.csv` is produced for every runtime.
+- [x] **4.1 Config shape.** `benchmark_suite.sh` reads `boards.KRIA` (or
+      `boards.$SECDA_BOARD`), the entry `./secda load` uses.
+- [x] **4.2 Root on the board.** A non-root `board_user` gets its run scripts
+      started with `sudo bash -lc` (passwordless sudo needed); root runs as is.
+- [x] **4.3 Runtime entries.** `configs/runtimes/runtime_dict_v6.json`:
+      `bfpp.v3`, `bfpp.v3b`, `bfpp.v4`, `bfpp.v4b`, `cpu.v6`, tagged
+      `<hw>_KRIA_<version>_<opt>` as `parse_results.py` expects;
+      `configs/exp_configs/MobileLLMQ2_v6.json` selects them and
+      `e2e_exp_config_gen.py` now loads the v6 dictionary.
+- [x] **4.4 Pushbullet token** removed from `benchmark_suite.sh`: read from
+      `config.json`'s `push_bullet_token` or `$PUSHBULLET_TOKEN`, and skipped if
+      neither is set. (It is still in history: 6.1.)
+- [x] **4.5 One full suite run**, on kria2 (not `kriaB_L`), `-b -c -l -p` with
+      `SECDA_DMA_IN_BUF_MB=64`: `llama_perf.csv` for all five runtimes from
+      both `llama-cli` and `llama-bench`; 30/30 nodes preloaded, no warnings.
+      Results in `benchmark/results/v6_migration/` (gitignored):
+
+      | Runtime | `llama-bench` t/s | J | `llama-cli` s |
+      |---|---|---|---|
+      | v3 driver | 6.43 | 224.7 | 1.40 |
+      | v3 batches | 6.42 | 224.3 | 1.39 |
+      | v4 driver | 6.35 | 229.9 | 1.42 |
+      | v4 batches | 6.29 | 232.2 | 1.45 |
+      | CPU | 5.90 | 222.6 | 1.26 |
+
+      Also fixed on the way: the run scripts now take their board path from
+      their own location (was `/home/ubuntu/Workspace/secda_llm`), reset with
+      `CPU_1_0` (the tracked pair; was `CPU_KRIA_1_0`), put the runtime folder
+      on `LD_LIBRARY_PATH` (the deploy puts the libraries there, not in
+      `bin/`), and the suite syncs `hardware_automation/bitstreams/KRIA/` to
+      the board. Models are read from `<board_dir>/models`.
 
 ## 5. Build and repo hygiene
 
-- [ ] **5.1 Ignore the run outputs.** Add `secda_profile.json` and `dma*.csv` to
-      `.gitignore` and to the fork excludes that `setup.sh` writes.
+- [x] **5.1 Ignore the run outputs.** `secda_profile.json` and `dma*.csv` are in
+      `.gitignore` and in the fork excludes `setup.sh` writes. Done 2026-09-30.
 - [ ] **5.2 Upstream presets** (`x64-linux-gcc-*` and the others). Configure one to
       confirm it stops at "GGML_SECDA needs a design". Then either set
       `GGML_SECDA=OFF` in them or hide them.
-- [ ] **5.3 KV260 CMA headroom.** 4 x (192 MB + 16 MB) = 832 MB of about 1 GB of CMA
-      fragments after long uptime.
-      - Size `DMA_IN_BUF_SIZE` from the model: MobileLLM-125M needs far less.
-      - Or make it a CMake option per runtime.
-      - Or allocate one input buffer per DMA only as big as the plan needs.
+- [x] **5.3 KV260 CMA headroom.** Done 2026-09-30 as a run-time option. The
+      first suite run failed at init: four 192 MB input buffers didn't fit a
+      fragmented CMA (949 MB free, the fourth `create udmabuf6` refused).
+      `SECDA_DMA_IN_BUF_MB` now overrides `DMA_IN_BUF_SIZE` in all four
+      drivers (`dma_in_buf_size()`), and preloading stops at whatever fits
+      (`alloc_layer` checks `dma_wgt_size()`); the suite passes it through.
+      MobileLLM-125M preloads 30/30 with 16 MB, same text. The default stays
+      192 MB for the bigger models. Sizing it from the model automatically
+      would need the plan before `initACC`; not done.
 - [ ] **5.4 armv7 / Z1 preset.** `SECDA-armv7-debug` hasn't been built since the v6
       port and there is no Z1 hardware variant. Build it once or remove it.
 - [ ] **5.5 Phase 7, SECDA-Core CMake tooling (optional, in SECDA-Core).** Add a

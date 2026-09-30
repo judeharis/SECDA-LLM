@@ -40,7 +40,7 @@ ln -sfn ../../../srcs/ggml_backend/ggml-secda ./llama.cpp/ggml/src/ggml-secda
 rm -f ./llama.cpp/ggml/include/ggml-secda.h   # old header link, no longer used
 excl="$(cd llama.cpp && realpath -m "$(git rev-parse --git-path info/exclude)")"
 mkdir -p "$(dirname "$excl")"
-for p in /ggml/src/ggml-secda /.vscode/ /results/ tbo.csv llama_perf.csv prf.csv /_gstats/ /_plans/; do
+for p in /ggml/src/ggml-secda /.vscode/ /results/ tbo.csv llama_perf.csv prf.csv secda_profile.json "dma*.csv" /_gstats/ /_plans/; do
   grep -qxF "$p" "$excl" 2>/dev/null || echo "$p" >> "$excl"
 done
 

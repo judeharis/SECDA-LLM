@@ -4,15 +4,16 @@ set -eo pipefail
 enable_power=false
 threads=(4)
 
-BOARD_PATH="/home/ubuntu/Workspace/secda_llm"
+# The suite rsyncs this script into the board_dir it runs from.
+BOARD_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BOARD_SUB="benchmark"
 POWER_START_SCRIPT="${BOARD_PATH}/${BOARD_SUB}/scripts/start_power_logging_KRIAv2.sh"
 POWER_STOP_SCRIPT="${BOARD_PATH}/${BOARD_SUB}/scripts/stop_power_logging_KRIAv2.sh"
 
 LOAD_BITSTREAM_PY="${HOME}/load_bitstream.py"
 BOARD_BITSTREAMS_DIR="${BOARD_PATH}/bitstreams"
-HOST_BITSTREAMS_DIR="/home/ubuntu/bitstreams"
-CLEAR_BITSTREAM_FILE="CPU_KRIA_1_0.bit"
+HOST_BITSTREAMS_DIR="${BOARD_PATH}/bitstreams"
+CLEAR_BITSTREAM_FILE="CPU_1_0.bit"
 
 UDMABUF_GLOB="/dev/udmabuf*"
 UDMABUF_PREFIX="/dev/udmabuf"
@@ -185,7 +186,7 @@ run_single_test() {
   echo "" | tee -a "${result_file}"
   echo "========== Test: ${test_name} (threads=${thread}) ==========" | tee -a "${result_file}"
 
-  LD_LIBRARY_PATH="${PWD}/bin:${LD_LIBRARY_PATH:-}" "./${test_binary}" test -b "${backend}" -t "${thread}" --output csv --test-params "${test_line}" \
+  LD_LIBRARY_PATH="${PWD}:${PWD}/bin:${LD_LIBRARY_PATH:-}" "./${test_binary}" test -b "${backend}" -t "${thread}" --output csv --test-params "${test_line}" \
     >> "${valid_file}" 2>&1 || cmd_status=$?
   check_cmd_status "${cmd_status}" "${test_name}" "tbo_validation"
 
@@ -193,7 +194,7 @@ run_single_test() {
 
   cmd_status=0
   start_power_logger "${power_log_file}" "${power_pid_file}"
-  LD_LIBRARY_PATH="${PWD}/bin:${LD_LIBRARY_PATH:-}" "./${test_binary}" perf -b "${backend}" -t "${thread}" --output csv --test-params "${test_line}" \
+  LD_LIBRARY_PATH="${PWD}:${PWD}/bin:${LD_LIBRARY_PATH:-}" "./${test_binary}" perf -b "${backend}" -t "${thread}" --output csv --test-params "${test_line}" \
     2>&1 | tee -a "${result_file}" || cmd_status=$?
 
   stop_active_power_logger

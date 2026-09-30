@@ -8,12 +8,34 @@ The scripts now treat the SECDA-LLM repository root as the CMake project entrypo
 
 Use `benchmark_suite.sh` to run the benchmark pipeline from either the repository root or the `benchmark/` directory.
 
-The script reads default board settings from `../config.json` using `jq`:
+The script reads the board from `../config.json` using `jq`: the
+`boards.KRIA` entry (set `SECDA_BOARD=<key>` for another), the same entry
+`./secda load` and `./secda run-on-board` use:
 
 - `board_user`
 - `board_hostname`
 - `board_port`
 - `board_dir`
+
+**Root on the board.** The run scripts load bitstreams, write
+`/dev/u-dma-buf-mgr` and drop caches. With `board_user` root they run as is;
+any other user needs passwordless sudo, and the suite starts them with
+`sudo bash -lc`.
+
+**Bitstreams** come from `hardware_automation/bitstreams/KRIA/` (`.bit` and
+`.hwh`, including the `CPU_1_0` reset pair) and are synced to
+`${board_dir}/bitstreams/` on every run. **Models** are read from
+`${board_dir}/models/`; put the `.gguf` files there, or link an existing
+directory.
+
+**DMA buffers.** Each run allocates four DMA input buffers of 192 MB from
+CMA, which can fail once the board's CMA has fragmented. Set
+`SECDA_DMA_IN_BUF_MB` when calling the suite to pass a smaller size to the
+board runs (MobileLLM-125M preloads all its layers with 16). Layers that don't
+fit are sent per call instead of preloaded.
+
+**Notifications.** A Pushbullet note is sent when a named run finishes, only if
+`config.json` has `push_bullet_token` (or `$PUSHBULLET_TOKEN` is set).
 
 It combines those values into the remote target and then runs up to three stages:
 
@@ -150,6 +172,13 @@ The notebook loads runtime definitions from:
 - `configs/runtimes/runtime_dict_1.json`
 - `configs/runtimes/runtime_dict_2.json`
 - `configs/runtimes/runtime_dict_3.json`
+- `configs/runtimes/runtime_dict_v6.json`: the runtimes for the SECDA-Core
+  migration: `bfpp.v3`, `bfpp.v3b`, `bfpp.v4`, `bfpp.v4b` (`BFPP_ACC_KRIA_3_0`
+  and `_4_0`, `driver` and `driver_batches`) and `cpu.v6`. The other
+  dictionaries name pre-migration bitstreams that are no longer in the repo.
+
+`scripts/e2e_exp_config_gen.py --exp_config_name MobileLLMQ2_v6` writes
+`configs/exp_configs.sh` for those five runtimes without the notebook.
 
 It loads model definitions from:
 

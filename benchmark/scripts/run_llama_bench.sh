@@ -4,7 +4,8 @@ set -eo pipefail
 enable_power=false
 threads=(1)
 
-BOARD_PATH="/home/ubuntu/Workspace/secda_llm"
+# The suite rsyncs this script into the board_dir it runs from.
+BOARD_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BOARD_SUB="benchmark"
 BENCHMARK_ROOT="${BOARD_PATH}/${BOARD_SUB}"
 RESULTS_DIR_REL="../results"
@@ -16,8 +17,8 @@ POWER_STOP_SCRIPT="${BENCHMARK_ROOT}/scripts/stop_power_logging_KRIAv2.sh"
 
 LOAD_BITSTREAM_PY="${HOME}/load_bitstream.py"
 BOARD_BITSTREAMS_DIR="${BOARD_PATH}/bitstreams"
-HOST_BITSTREAMS_DIR="/home/ubuntu/bitstreams"
-CLEAR_BITSTREAM_FILE="CPU_KRIA_1_0.bit"
+HOST_BITSTREAMS_DIR="${BOARD_PATH}/bitstreams"
+CLEAR_BITSTREAM_FILE="CPU_1_0.bit"
 DEFAULT_BITSTREAM_FILE="CPU_1_0.bit"
 
 UDMABUF_GLOB="/dev/udmabuf*"
@@ -212,12 +213,12 @@ run_single_binary() {
     exit 1
   fi
 
-  echo "sudo env LD_LIBRARY_PATH=\${PWD}/bin:\${LD_LIBRARY_PATH:-} ./${bench_binary} -m ${MODEL_DIR}/${model} -b ${BENCH_B} -n ${BENCH_N} -t ${thread} -p ${BENCH_P} -pg ${BENCH_PG} ${FLAGS}" >>"${COMMANDS_FILE}"
+  echo "sudo env LD_LIBRARY_PATH=\${PWD}:\${PWD}/bin:\${LD_LIBRARY_PATH:-} ./${bench_binary} -m ${MODEL_DIR}/${model} -b ${BENCH_B} -n ${BENCH_N} -t ${thread} -p ${BENCH_P} -pg ${BENCH_PG} ${FLAGS}" >>"${COMMANDS_FILE}"
 
   start_power_logger "${power_log_file}" "${power_pid_file}"
 
   local cmd_status=0
-  LD_LIBRARY_PATH="${PWD}/bin:${LD_LIBRARY_PATH:-}" "./${bench_binary}" -m "${MODEL_DIR}/${model}" -t "${thread}" -b "${BENCH_B}" -n "${BENCH_N}" -p "${BENCH_P}" -pg "${BENCH_PG}" ${FLAGS} \
+  LD_LIBRARY_PATH="${PWD}:${PWD}/bin:${LD_LIBRARY_PATH:-}" "./${bench_binary}" -m "${MODEL_DIR}/${model}" -t "${thread}" -b "${BENCH_B}" -n "${BENCH_N}" -p "${BENCH_P}" -pg "${BENCH_PG}" ${FLAGS} \
     2>&1 | tee "${result_txt}" || cmd_status=$?
 
   stop_active_power_logger

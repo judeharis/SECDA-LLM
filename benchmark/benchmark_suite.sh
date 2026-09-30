@@ -9,12 +9,27 @@ cd "${script_dir}"
 # CONFIG
 # ============================================================================
 
-board_user="$(jq -r '.board_user // empty' "${repo_root}/config.json")"
-board_hostname="$(jq -r '.board_hostname // empty' "${repo_root}/config.json")"
+# The board is config.json's boards.<SECDA_BOARD> entry (default KRIA), the
+# same one ./secda load and run-on-board use.
+board_key="${SECDA_BOARD:-KRIA}"
+cfg() { jq -r --arg b "$board_key" ".boards[\$b].$1 // empty" "${repo_root}/config.json"; }
+board_user="$(cfg board_user)"
+board_hostname="$(cfg board_hostname)"
 board_addr="${board_user}@${board_hostname}"
-port="$(jq -r '.board_port // empty' "${repo_root}/config.json")"
-board_dir="$(jq -r '.board_dir // empty' "${repo_root}/config.json")"
+port="$(cfg board_port)"
+board_dir="$(cfg board_dir)"
 board_sub="benchmark"
+# Optional: no token, no notification. $PUSHBULLET_TOKEN overrides config.json.
+pb_token="${PUSHBULLET_TOKEN:-$(jq -r '.push_bullet_token // empty' "${repo_root}/config.json")}"
+# The run scripts load bitstreams, write /dev/u-dma-buf-mgr and drop caches,
+# so they need root: a non-root board user must have passwordless sudo.
+board_shell="bash -lc"
+[[ "${board_user}" != "root" ]] && board_shell="sudo bash -lc"
+# Passed through to the board runs: the per-DMA input buffer in MB (the
+# drivers' default is 192; a small model needs far less, and four 192 MB
+# buffers can fail on a fragmented CMA).
+board_env=""
+[[ -n "${SECDA_DMA_IN_BUF_MB:-}" ]] && board_env="export SECDA_DMA_IN_BUF_MB=${SECDA_DMA_IN_BUF_MB} && "
 
 # Benchmark registry: benchmark_name -> script_name
 # Add new benchmarks by adding entries here
@@ -40,7 +55,8 @@ declare -A stage_status
 
 send_pushbullet_notification() {
   local message="$*"
-  curl -s -o /dev/null --header 'Access-Token: o.eIEuBUZBIooNKzofTc6WATcyobjqK4TD' \
+  [[ -n "${pb_token}" ]] || return 0
+  curl -s -o /dev/null --header "Access-Token: ${pb_token}" \
     --header 'Content-Type: application/json' \
     --data-binary "{\"body\":\"${message}\",\"title\":\"Jude Home (Ubuntu)\",\"type\":\"note\"}" \
     --request POST \
@@ -95,6 +111,13 @@ sync_support_scripts() {
   rsync -avz -e "ssh -p $port" "${script_dir}/scripts/stop_power_logging_KRIAv2.sh" "$board_addr":"${board_dir}/${board_sub}/scripts/"
 }
 
+sync_bitstreams() {
+  # The runtimes' bitstreams and the CPU_1_0 reset pair, .bit with its .hwh.
+  log_stage "Syncing bitstreams to board ${board_addr}"
+  ssh -p "$port" "$board_addr" "mkdir -p '${board_dir}/bitstreams'"
+  rsync -avz -e "ssh -p $port" "${repo_root}/hardware_automation/bitstreams/KRIA/" "$board_addr":"${board_dir}/bitstreams/"
+}
+
 sync_perplexity_dataset() {
   log_stage "Syncing perplexity dataset to board ${board_addr}"
   ssh -p "$port" "$board_addr" "mkdir -p '${board_dir}/datasets'"
@@ -118,7 +141,7 @@ send_and_run_benchmark() {
 
   log_stage "Running ${benchmark_name}${script_flags:+ with flags: ${script_flags}}..."
   ssh -T -p "$port" "$board_addr" "chmod +x '${board_dir}/${script_name}'"
-  ssh -T -p "$port" "$board_addr" "bash -lc 'source /etc/profile.d/pynq_venv.sh && cd '\''${board_dir}'\'' && ./'\''${script_name}'\'' ${script_flags}'"
+  ssh -T -p "$port" "$board_addr" "${board_shell} '${board_env}source /etc/profile.d/pynq_venv.sh && cd '\''${board_dir}'\'' && ./'\''${script_name}'\'' ${script_flags}'"
 }
 
 fetch_and_parse_results() {
@@ -298,8 +321,9 @@ main() {
     log_stage "Skipping compile/send"
   fi
 
-  # Sync support scripts
+  # Sync support scripts and bitstreams
   sync_support_scripts
+  sync_bitstreams
 
   # Run llama-cli
   if [[ $do_cli -eq 1 ]]; then
