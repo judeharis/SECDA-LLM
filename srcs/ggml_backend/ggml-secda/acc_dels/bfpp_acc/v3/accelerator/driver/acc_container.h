@@ -2,6 +2,7 @@
 #define ACC_CONTAINER
 
 #include <cassert>
+#include <cstdlib>
 #include <cmath>
 #include <iomanip>
 #include <map>
@@ -16,6 +17,26 @@
 #include "secda-core/axi_support/v6/axi_api.h"
 #include "secda-core/secda_profiler/secda_profile_writer.h"
 #include "secda-core/secda_profiler/profiler.h"
+
+// DMA input buffer per DMA: DMA_IN_BUF_SIZE, or SECDA_DMA_IN_BUF_MB from the
+// environment. Four of these plus the output buffers must come out of CMA as
+// contiguous blocks, and the KV260's 1 GB fragments with uptime, so a run can
+// ask for less. Preloading stops at whatever fits (alloc_layer checks
+// dma_wgt_size()); layers that don't fit are sent per call instead.
+static inline unsigned int dma_in_buf_size() {
+  static const unsigned int size = [] {
+    const char *env = getenv("SECDA_DMA_IN_BUF_MB");
+    long mb = env ? atol(env) : 0;
+    unsigned long bytes = (unsigned long)mb << 20;
+    if (mb > 0 && bytes > DMA_INP_SIZE && bytes <= 0xFFFFFFFFul)
+      return (unsigned int)bytes;
+    return (unsigned int)DMA_IN_BUF_SIZE;
+  }();
+  return size;
+}
+static inline unsigned int dma_wgt_size() {
+  return dma_in_buf_size() - DMA_INP_SIZE;
+}
 #include "secda-core/secda_utils/acc_helpers.h"
 #include "secda-core/secda_utils/utils.h"
 
@@ -270,7 +291,7 @@ struct layer_details {
 
     for (int i = 0; i < DMA_COUNT; i++) {
       dma_size_list[i] = dma_size_list[i] * bytes_per_block;
-      if (dma_size_list[i] + curr_offsets[i] > DMA_WGT_SIZE)
+      if (dma_size_list[i] + curr_offsets[i] > dma_wgt_size())
         alloc_allowed = false;
     }
     if (!alloc_allowed || !LAYER_PREALLOC) {

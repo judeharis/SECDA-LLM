@@ -151,7 +151,7 @@ static void initACC() {
     ctrl1.init_sigs(CTRL_Reg_Count);
     sysC_binder(&_acc, &scs1, &ctrl1, &hwc1, &mdma1);
     // SECDA-Core axi_support v6: u-dma-buf buffers, owned by multi_dma.
-    mdma1.alloc_buffers(DMA_IN_BUF_SIZE, DMA_OUT_BUF_SIZE);
+    mdma1.alloc_buffers(dma_in_buf_size(), DMA_OUT_BUF_SIZE);
     acc = &_acc;
     scs = &scs1;
     ctrl = &ctrl1;
@@ -166,7 +166,7 @@ static void initACC() {
     static struct h_ctrl hwc1(acc_hwc_base);
     static struct s_mdma mdma1(4, dma_addrs);
     // SECDA-Core axi_support v6: u-dma-buf buffers, owned by multi_dma.
-    mdma1.alloc_buffers(DMA_IN_BUF_SIZE, DMA_OUT_BUF_SIZE);
+    mdma1.alloc_buffers(dma_in_buf_size(), DMA_OUT_BUF_SIZE);
     acc = dparams.acc;
     ctrl1.init_sigs(CTRL_Reg_Count);
     hwc1.init_hwc(HWC_Monitor_Count);
