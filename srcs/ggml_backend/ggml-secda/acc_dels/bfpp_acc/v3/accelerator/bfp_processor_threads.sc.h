@@ -105,10 +105,10 @@ void BFPP_UNIT::Compute() {
         d1.data = fout[0];
         d1.tlast = (n == nstep - 1 && m == mstep - 1);
         dout1.write(d1);
+        DWAIT(SCHED_BFPP_UNIT_Compute_L1_1);
       }
       n_idx += kb_l;
       m_idx = 0;
-      DWAIT(SCHED_BFPP_UNIT_Compute_L1_1);
     }
     bfpp_ready.write(1);
     bfpp_free.write(1);

@@ -1,5 +1,26 @@
 # bfpp_acc/v4 — changes
 
+## 2026-09-30 — flattened Compute loop charged per output
+
+**Why.** SECDA-LLM TODO 3.7: the RTL replay showed outputs 46 cycles apart, as on
+the board. HLS flattens Compute's `n` and `m` loops into Loop 1.1, so one Loop 1.1
+iteration is one output, but sched-sync had put `SCHED_BFPP_UNIT_Compute_L1_1` in
+the `n` body, charging it once per row. SECDA-Core `facb566` places a flattened
+loop's `DWAIT` in the innermost flattened source loop.
+
+| Where | Change |
+|---|---|
+| `accelerator/bfp_processor_threads.sc.h` | `DWAIT(SCHED_BFPP_UNIT_Compute_L1_1)` moved from the `n` body to the end of the `m` body (value unchanged, 29) |
+| `accelerator/acc_schedule.{h,json}` | regenerated; timestamps only |
+
+**Verified.** Simulation: the gate suite differs from its previous baseline only in
+the cycle counters; text, pass counts and perplexity are identical (re-baselined,
+the old one kept as `step0_pre_flatten`). Against the board, `llama-cli -n 4`
+`HWC_X1_Compute` is 79.7M in simulation vs 80.3M (board/sim **1.008**, was 1.310),
+and the single-tile Q2_K compute is 115.29 us vs 117.77 us (was 41.55 us).
+Synthesis is unaffected (`DWAIT` is erased under `__SYNTHESIS__`), so the
+bitstreams stand.
+
 ## 2026-09-29 — sched-sync --outer --variable max
 
 **Why.** SECDA-LLM TODO 3.6: the first sync modelled only loops with a fixed

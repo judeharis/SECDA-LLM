@@ -5,7 +5,7 @@
       "name": "BFPP_ACCv4_0_KRIA",
       "board": "KRIA",
       "acc_tag": "BFPP_ACC_KRIA_4_0",
-      "generated": "2026-09-29T09:01:47Z",
+      "generated": "2026-09-30T00:33:35Z",
       "loops": [
         {
           "constant": "SCHED_BFPP_UNIT_Compute_L1",

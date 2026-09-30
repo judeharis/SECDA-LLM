@@ -18,14 +18,14 @@
 #if defined(KRIA)
 #define SECDA_HW_VARIANT_BFPP_ACCv3_0_KRIA
 #else
-// Simulation default: BFPP_ACCv3_0_KRIA (from BFPP_ACC_KRIA_3_0, 2026-09-29T08:59:24Z).
+// Simulation default: BFPP_ACCv3_0_KRIA (from BFPP_ACC_KRIA_3_0, 2026-09-30T00:33:31Z).
 // The SystemC build defines no board, so it models this one.
 #define SECDA_HW_VARIANT_BFPP_ACCv3_0_KRIA
 #endif
 #endif
 
 #if defined(SECDA_HW_VARIANT_BFPP_ACCv3_0_KRIA)
-// BFPP_ACCv3_0_KRIA, from BFPP_ACC_KRIA_3_0 (2026-09-29T08:59:24Z)
+// BFPP_ACCv3_0_KRIA, from BFPP_ACC_KRIA_3_0 (2026-09-30T00:33:31Z)
 #define SCHED_BFPP_UNIT_Compute_L1 2 // bfp_processor_threads.sc.h:77 Loop 1
 #define SCHED_BFPP_UNIT_Compute_L1_1 29 // bfp_processor_threads.sc.h:91 Loop 1.1
 #define SCHED_BFPP_UNIT_Compute_L1_1_1 15 // bfp_processor_threads.sc.h:95 Loop 1.1.1

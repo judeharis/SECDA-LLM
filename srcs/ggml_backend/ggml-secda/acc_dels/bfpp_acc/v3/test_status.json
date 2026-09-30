@@ -123,6 +123,15 @@
         "commit": "772add9",
         "source": "manual",
         "notes": "sched-sync --outer --variable max (SECDA-Core ad29364), 9 more DWAIT constants, converged on pass 2; committed alongside this record. Gate suite vs its previous baseline: only the cycle counters differ (16 of 68 checks); re-baselined. llama-cli -n 4 HWC_X1_Compute: sim 61,340,760 vs board 80,342,232 (1.310). Single-tile Q2_K perf compute per run: sim 41.55 us vs board 117.77 us."
+      },
+      {
+        "level": "builds_sim",
+        "outcome": "pass",
+        "target": "sysc",
+        "date": "2026-09-30",
+        "commit": "e044f7d",
+        "source": "manual",
+        "notes": "sched-sync DWAIT placement for flattened loops (SECDA-Core facb566): SCHED_BFPP_UNIT_Compute_L1_1 (29) moved from the n body to the m body, i.e. charged per output, not per row; committed alongside this record. Gate suite vs its previous baseline (kept as step0_pre_flatten): only the cycle counters differ (16 of 65 checks); text, pass counts and perplexity identical; re-baselined. llama-cli -n 4 HWC_X1_Compute: sim 79,703,676 vs board 80,342,232 (1.008; was 1.310). Single-tile Q2_K perf compute per run: sim 115.29 us vs board 117.77 us (was 41.55 us)."
       }
     ]
   }
