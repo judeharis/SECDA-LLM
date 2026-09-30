@@ -286,9 +286,12 @@ These bugs were kept for parity during the migration (minimal-fork spec §6, ris
 
 - [x] **5.1 Ignore the run outputs.** `secda_profile.json` and `dma*.csv` are in
       `.gitignore` and in the fork excludes `setup.sh` writes. Done 2026-09-30.
-- [ ] **5.2 Upstream presets** (`x64-linux-gcc-*` and the others). Configure one to
-      confirm it stops at "GGML_SECDA needs a design". Then either set
-      `GGML_SECDA=OFF` in them or hide them.
+- [x] **5.2 Upstream presets.** Done 2026-09-30. They inherited `base` only and
+      so ran with SECDA on: configure stopped at SECDA-Core's SystemC lookup (or,
+      with `SYSTEMC_HOME`, at "GGML_SECDA needs a design"). `base` now sets
+      `SECDA_LLM_ENABLE_SECDA` and `GGML_SECDA` OFF and `secda-llm-base` turns
+      `GGML_SECDA` back on: `x64-linux-gcc-release` builds `llama-cli` CPU-only,
+      and the SECDA presets configure as before.
 - [x] **5.3 KV260 CMA headroom.** Done 2026-09-30 as a run-time option. The
       first suite run failed at init: four 192 MB input buffers didn't fit a
       fragmented CMA (949 MB free, the fourth `create udmabuf6` refused).
@@ -298,8 +301,14 @@ These bugs were kept for parity during the migration (minimal-fork spec §6, ris
       MobileLLM-125M preloads 30/30 with 16 MB, same text. The default stays
       192 MB for the bigger models. Sizing it from the model automatically
       would need the plan before `initACC`; not done.
-- [ ] **5.4 armv7 / Z1 preset.** `SECDA-armv7-debug` hasn't been built since the v6
-      port and there is no Z1 hardware variant. Build it once or remove it.
+- [x] **5.4 armv7 / Z1 preset.** Done 2026-09-30 (owner: fix it to compile; a Z1
+      design is post-migration). `SECDA-armv7-debug` gained `CMAKE_SYSTEM_NAME`
+      Linux (without it ggml added `-march=native`), `GGML_NATIVE` OFF,
+      `-mcpu=cortex-a9 -mfpu=neon-fp16` (the fp16 conversions need it) and
+      `-lstdc++fs` (GCC 8.3 keeps `std::filesystem` there). `secda-llama-cli`,
+      `secda-test-backend-ops`, `secda-llama-bench` and `llama-perplexity` build
+      as 32-bit ARM against `secda_corev6`. Not run: there is no Z1 bfpp_acc
+      bitstream.
 - [ ] **5.5 Phase 7, SECDA-Core CMake tooling (optional, in SECDA-Core).** Add a
       `build_system: "cmake"` config key, so that `./secda build` runs
       `cmake --build --preset` and `./secda list` reads `hw_params.json` without
@@ -311,4 +320,5 @@ These bugs were kept for parity during the migration (minimal-fork spec §6, ris
       and the one in the local `config.json`.
 - [ ] **6.2 Branch.** SECDA-DS's `CLAUDE.md` names `v3_core_upgrade`, but the work is
       on `v3_core_upgrade_wip`. Fast-forward `v3_core_upgrade`, or update the docs.
-- [ ] **6.3 NaN semantics** (1.3): upstream's failure is now the default, with `SECDA_TBO_NAN_PASS=1` as the opt-out. Confirm, or flip the default.
+- [x] **6.3 NaN semantics** (1.3): confirmed 2026-09-30, a NaN output fails the case
+      by default (upstream's behaviour); `SECDA_TBO_NAN_PASS=1` is the opt-out.
