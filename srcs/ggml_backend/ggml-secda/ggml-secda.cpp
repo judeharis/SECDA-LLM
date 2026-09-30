@@ -4,14 +4,70 @@
 
 #include "ops_support.h"
 
+#include <cinttypes>
+#include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <fstream>
 #include <future>
 #include <iostream>
+#include <sys/stat.h>
 #include <vector>
 
+// ************************************* //
+// SECDA_GRAPH_STATS: per-node timing table
+// ************************************* //
 
+// With SECDA_GRAPH_STATS set (and not "0"), every node this backend computes is
+// timed and written to _gstats/graph_stats.csv, in the 14-column format the old
+// fork's GGML_PERF graph print used (run_llama_bench.sh collects it). Only
+// SECDA's own nodes are seen here, so Backend is always SECDA; each row is one
+// run of the node, so PerfRuns is 1. Graph counts this backend's compute calls
+// (one per SECDA split), not whole llama graphs as the old print did. PerfCycles
+// is ggml_cycles(). Off by default.
+namespace {
+struct secda_graph_stats {
+  FILE *fp = nullptr;
+  int graph = 0;
 
+  static secda_graph_stats *get() {
+    static secda_graph_stats *stats = [] {
+      const char *env = getenv("SECDA_GRAPH_STATS");
+      if (!env || !*env || strcmp(env, "0") == 0) return (secda_graph_stats *)nullptr;
+      mkdir("_gstats", 0755);
+      FILE *fp = fopen("_gstats/graph_stats.csv", "w");
+      if (!fp) {
+        GGML_LOG_ERROR("SECDA_GRAPH_STATS: cannot open _gstats/graph_stats.csv\n");
+        return (secda_graph_stats *)nullptr;
+      }
+      fprintf(fp, "Graph,Index,M,N,K,Backend,Op,Src0Type,Src1Type,PerfRuns,"
+                  "PerfCycles,PerfCyclesPerRun,PerfTimeUs,PerfTimeUsPerRun\n");
+      auto *s = new secda_graph_stats();
+      s->fp = fp;
+      return s;
+    }();
+    return stats;
+  }
+
+  void row(int index, const struct ggml_tensor *node, int64_t cycles,
+           int64_t time_us) {
+    const struct ggml_tensor *src0 = node->src[0];
+    const struct ggml_tensor *src1 = node->src[1];
+    fprintf(fp,
+            "%d,%d,%" PRId64 ",%" PRId64 ",%" PRId64 ",SECDA,%s,%s,%s,1,%" PRId64
+            ",%.3f,%.3f,%.3f\n",
+            graph, index, node->ne[0], node->ne[1], src0 ? src0->ne[0] : 0,
+            ggml_op_name(node->op), src0 ? ggml_type_name(src0->type) : "NONE",
+            src1 ? ggml_type_name(src1->type) : "NONE", cycles, (double)cycles,
+            (double)time_us, (double)time_us);
+  }
+
+  void end_graph() {
+    fflush(fp);
+    graph++;
+  }
+};
+} // namespace
 
 // ************************************* //
 // backend interface
@@ -57,9 +113,13 @@ static enum ggml_status ggml_secda_graph_compute(ggml_backend_t backend,
                                                  struct ggml_cgraph *cgraph) {
   ggml_secda_context *ctx = (ggml_secda_context *)backend->context;
   secda_planner_resolve(backend, ctx->planner, cgraph);
+  secda_graph_stats *stats = secda_graph_stats::get();
 
   for (int i = 0; i < cgraph->n_nodes; i++) {
     struct ggml_tensor *node = cgraph->nodes[i];
+    const bool timed = stats && !ggml_op_is_empty(node->op);
+    const int64_t t0 = timed ? ggml_time_us() : 0;
+    const int64_t c0 = timed ? ggml_cycles() : 0;
 
     switch (node->op) {
     case GGML_OP_MUL_MAT:
@@ -85,7 +145,10 @@ static enum ggml_status ggml_secda_graph_compute(ggml_backend_t backend,
     default:
       GGML_ABORT("%s: unsupported op %s\n", __func__, ggml_op_desc(node));
     }
+    if (timed)
+      stats->row(i, node, ggml_cycles() - c0, ggml_time_us() - t0);
   }
+  if (stats) stats->end_graph();
   secda_planner_end_compute(ctx->planner);
 
   return GGML_STATUS_SUCCESS;

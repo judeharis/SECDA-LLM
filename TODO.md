@@ -95,7 +95,13 @@ These bugs were kept for parity during the migration (minimal-fork spec §6, ris
         - 1.4 passes in simulation and on `kriaB_L`;
         - board tbo 51/51 and 55/55, SOFT_MAX 212/212;
         - `-b 16` perplexity 3.3636, unchanged, in all four variants.
-- [ ] **2.3 (optional) H3:** the `SECDA_GRAPH_STATS` writer.
+- [x] **2.3 (optional) H3: the `SECDA_GRAPH_STATS` writer.** Done 2026-09-30, in
+      `ggml-secda.cpp` (no fork change). With `SECDA_GRAPH_STATS` set, each node the
+      backend computes is timed and written to `_gstats/graph_stats.csv` in the old
+      14-column format, which `run_llama_bench.sh` already collects. `Backend` is
+      always SECDA and `PerfRuns` 1; `Graph` counts SECDA compute calls (one per
+      split). Unset, nothing is written. Sim `llama-cli -n 2`: 90 rows (30 MUL_MAT
+      x 3 calls).
 
 ## 3. Hardware flow
 
