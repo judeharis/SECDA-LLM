@@ -141,7 +141,8 @@ The actionable follow-ups are in [TODO.md](TODO.md).
   `vec_dot`, where simulation used 1. For `llama-cli -n 4`, the board's compute
   counter is 1.008x simulation's, down from 21x before the sync (TODO 3.6, 3.7:
   the flattened Compute loop is now charged per output). Weight transfer is
-  still 1.47x (TODO 3.8).
+  1.47x: the design matches simulation (RTL replay), and the gap is a fixed
+  ~7-14 us of driver DMA-issue time per weight load inside the counter (TODO 3.8).
 - **Monitors 4-11 aren't busy counters.** `Weight_Transfer_A-D` never leave
   their busy state after the first weight; `WeightLoader_A-D` never report one.
   Left as they are: fixing them needs a bitstream rebuild (TODO 3.2).

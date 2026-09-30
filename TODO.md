@@ -196,9 +196,42 @@ These bugs were kept for parity during the migration (minimal-fork spec §6, ris
       - **Gate suite:** only the cycle counters differ (16 of 65 checks);
         re-baselined, previous kept as `step0_pre_flatten`. Since the sync, the
         `-b 16` perplexity runs on `SECDA-sim-x64` only (`out/baseline_mf`, local).
-- [ ] **3.8 Weight-transfer ratios.** Board/sim: single tile 2.7x, `llama-cli`
-      Load_Unit 1.47x, test-backend-ops' 51 tests 10x. The RTL replay
-      (`scripts/rtl_replay`) can check them the same way as 3.7.
+- [ ] **3.8 Weight-transfer ratios: diagnosed 2026-09-30; the design is exact,
+      the gap is driver time inside the counter.**
+      - **What the counter measures.** `fpga_weight_transfer_cycles` is
+        `Load_Unit` (monitor 1) in state 4: from reading the weight opcode until
+        all four WeightLoaders finish.
+      - **RTL replay** (`scripts/rtl_replay`, single-tile Q2_K, v3): the weight
+        phase (4 x 672 words) takes 681 cycles in the RTL, 674 in simulation.
+        With the streams fed one word a cycle, the hardware matches the model.
+      - **Cause.** On the board, `Load_Unit` enters state 4 as soon as the opcode
+        arrives on DMA 0, and then waits while the ARM programs DMAs 1-3 over
+        MMIO. `LoadWeights_Inference` starts DMA 0 (opcode + its weights) first;
+        `LoadWeights_Preloaded` sends the opcode, waits for it, then sets four
+        offsets and starts four DMAs. In SystemC the driver takes no simulated
+        time, so simulation never sees that window.
+      - **Evidence: a fixed cost per call**, not a bandwidth ratio. The ratio
+        falls with transfer size, as a constant does:
+
+        | Case | Path | Calls | Sim | Board | Extra per call |
+        |---|---|---|---|---|---|
+        | test-backend-ops, 51 tests (all M=16, K=256) | Inference | 51 | ~37 us | 388 us | ~6.9 us |
+        | single Q2_K tile | Inference | 1 | 3.39 us | ~9.2 us | ~5.8 us |
+        | `llama-cli -n 4` | Preloaded | 600 | 3.63M cyc | 5.35M cyc | ~14.3 us |
+
+        The board figures are from the 2026-09-28/29 `kriaB_L` runs
+        (`hardware_automation/results/bfpp_acc_v3/20260928T212011Z`, TODO 3.5);
+        the single-tile board value is only kept as a ratio. The call count is
+        from a traced sim run (600 sends on DMA 1).
+      - **Options (owner's call):**
+        - *Accept it:* the counter includes driver DMA-issue time by design;
+          compare simulation with the board as sim + ~7 us (Inference) or
+          ~14 us (Preloaded) per `LoadWeights` call.
+        - *Driver fix:* start DMAs 1-3 before the DMA carrying the opcode (the
+          WeightLoaders only read once the Load_Unit raises their flags, so
+          the words wait in the stream). That removes the window from the
+          counter and from the board's wall-clock, ~8.6 ms of `llama-cli -n 4`.
+          Needs a board run on `kriaB_L` to confirm.
 
 ## 4. Benchmark suite (can't run the new builds today)
 
