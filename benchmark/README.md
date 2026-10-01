@@ -34,15 +34,17 @@ CMA, which can fail once the board's CMA has fragmented. Set
 board runs (MobileLLM-125M preloads all its layers with 16). Layers that don't
 fit are sent per call instead of preloaded.
 
-It combines those values into the remote target and then runs up to three stages:
+It combines those values into the remote target and runs the stages you select:
 
-- `-b`: build and send binaries to the board
-- `-r`: copy experiment scripts and run the benchmark on the board
-- `-l` or `--llama-bench`: copy scripts and run FPGA `llama-bench` on the board
-- `-pp` or `--perplexity`: sync the wikitext-2 dataset and run FPGA `llama-perplexity` on the board
-- `-p`: fetch raw results and parse them locally
+- `-b` / `--compile`: build and send binaries to the board
+- `-c` / `--cli`: run `llama-cli` on the board
+- `-l` / `--llama-bench`: run `llama-bench` on the board
+- `-pp` / `--perplexity`: sync the wikitext-2 dataset and run `llama-perplexity` on the board
+- `-s` / `--synth-bench`: run the synthetic `test-backend-ops` benchmark on the board
+- `-p` / `--parse`: fetch raw results and parse them locally
+- `-n` / `--name LABEL`, `-t` / `--threads N`, `-po` / `--power` (default on), `--no-power`
 
-If you run the script without `-b`, `-r`, or `-p`, it runs all three stages.
+With no stage flag it runs compile, `llama-bench` and parse (`-b -l -p`).
 
 ### Examples
 
@@ -58,10 +60,10 @@ Only build and deploy binaries:
 ./benchmark_suite.sh -b
 ```
 
-Only run experiments on the board:
+Only run `llama-cli` on the board:
 
 ```bash
-./benchmark_suite.sh -r
+./benchmark_suite.sh -c
 ```
 
 Only run FPGA llama-bench on the board:
@@ -221,9 +223,9 @@ The benchmark pipeline follows the root wrapper project and the top-level `CMake
 
 1. Generate or refresh `configs/exp_configs.sh` from the notebook.
 2. Run `./benchmark_suite.sh -b` to compile and send binaries from the SECDA-LLM root project.
-3. Run `./benchmark_suite.sh -r` to execute the experiments on the board.
-4. Optional: run `./benchmark_suite.sh -l` to execute FPGA `llama-bench` on the board.
-5. Run `./benchmark_suite.sh -p` to fetch and parse the benchmark outputs locally.
+3. Run `./benchmark_suite.sh -c` (`llama-cli`) and/or `-l` (`llama-bench`) to run the
+   experiments on the board.
+4. Run `./benchmark_suite.sh -p` to fetch and parse the benchmark outputs locally.
 
 ## Output
 
