@@ -77,7 +77,8 @@ if (SECDA_LLM_ENABLE_SECDA)
 		add_subdirectory("${SECDA_LLM_SECDA_CORE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/secda_core")
 
 		# axi_support v6 allocates every DMA buffer through u-dma-buf (no fixed
-		# addresses, no /dev/mem fallback), so there is no DEF_BUF switch to set.
+		# physical addresses to fall back to; the buffers' pages are mapped through
+		# /dev/mem), so there is no DEF_BUF switch to set.
 	endif()
 endif()
 
