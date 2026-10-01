@@ -61,7 +61,7 @@ The submodule URLs are SSH (`git@github.com:judeharis/...`).
 **Standalone clone:**
 
 ```bash
-git clone -b v3_core_upgrade_wip https://github.com/judeharis/SECDA-LLM.git
+git clone -b v3_core_upgrade https://github.com/judeharis/SECDA-LLM.git
 cd SECDA-LLM
 git submodule update --init          # llama.cpp and third_party/secda_core
 ./setup.sh
@@ -263,12 +263,9 @@ the SECDA-DS 30% rule, their pairs were copied by hand from
 benchmark/scripts/compile_send_kria.sh -a <user>@<host> -p <port> -d <board_path> -s benchmark
 ```
 
-Call it directly for now. `benchmark/benchmark_suite.sh -b` is meant to call it
-with the board settings from `config.json`, but it doesn't work with this repo's
-`config.json` yet. It reads `board_user`, `board_hostname`, `board_port` and
-`board_dir` from the top level, while `config.json` keeps them under `boards.KRIA`.
-So it stops with "Error: board_port must be numeric" before it builds anything.
-`benchmark/README.md` still documents the flat keys. See STATUS.md.
+`benchmark/benchmark_suite.sh -b` calls it with the board settings from
+`config.json`'s `boards.KRIA` entry (or `boards.$SECDA_BOARD`); see
+`benchmark/README.md`.
 
 ### On the board
 
